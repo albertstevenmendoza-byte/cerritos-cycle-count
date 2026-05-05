@@ -2,463 +2,567 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Cerritos Physical Count — 17AG</title>
-
-  <!-- SheetJS — parses the SAP Excel export client-side -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-
-  <!-- Supabase JS v2 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-
   <style>
-    /* ── Reset & Base ─────────────────────────────────────── */
+    /* ── Reset ──────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --amber:        #B87C20;
-      --amber-dark:   #9A6816;
-      --amber-light:  #F5E4C3;
-      --bg:           #F4F3F0;
-      --surface:      #FFFFFF;
-      --surface-2:    #F0EFEB;
-      --border:       rgba(0,0,0,0.10);
-      --border-med:   rgba(0,0,0,0.18);
-      --text:         #1A1A18;
-      --text-2:       #6B6B67;
-      --text-3:       #A0A09C;
-      --success:      #2A7A3B;
-      --success-bg:   #EAF3DE;
-      --danger:       #A32D2D;
-      --danger-bg:    #FCEBEB;
-      --info:         #185FA5;
-      --info-bg:      #E6F1FB;
-      --mono:         'Courier New', Courier, monospace;
-      --radius-sm:    6px;
-      --radius-md:    8px;
-      --radius-lg:    12px;
+      --amber:       #B87C20;
+      --amber-dk:    #9A6816;
+      --amber-lt:    #F5E4C3;
+      --bg:          #F4F3F0;
+      --surface:     #FFFFFF;
+      --surface-2:   #F0EFEB;
+      --border:      rgba(0,0,0,0.09);
+      --border-med:  rgba(0,0,0,0.16);
+      --text:        #1A1A18;
+      --text-2:      #6B6B67;
+      --text-3:      #A8A8A4;
+      --ok:          #2A7A3B;
+      --ok-bg:       #EAF3DE;
+      --bad:         #A32D2D;
+      --bad-bg:      #FCEBEB;
+      --info:        #185FA5;
+      --info-bg:     #E6F1FB;
+      --mono:        'Courier New', Courier, monospace;
+      --r-sm:        6px;
+      --r-md:        10px;
+      --r-lg:        14px;
+      --tab-h:       52px;
+      --top-h:       52px;
     }
 
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg:           #1C1C1A;
-        --surface:      #242422;
-        --surface-2:    #2E2E2C;
-        --border:       rgba(255,255,255,0.10);
-        --border-med:   rgba(255,255,255,0.18);
-        --text:         #E8E8E4;
-        --text-2:       #9A9A96;
-        --text-3:       #6B6B67;
-        --amber-light:  #3A2E14;
-        --success-bg:   #172814;
-        --danger-bg:    #2A1010;
-        --info-bg:      #0C2540;
+        --bg:        #1C1C1A;
+        --surface:   #242422;
+        --surface-2: #2E2E2C;
+        --border:    rgba(255,255,255,0.09);
+        --border-med:rgba(255,255,255,0.16);
+        --text:      #E8E8E4;
+        --text-2:    #9A9A96;
+        --text-3:    #6B6B67;
+        --amber-lt:  #3A2E14;
+        --ok-bg:     #162B14;
+        --bad-bg:    #2A1010;
+        --info-bg:   #0C2540;
       }
     }
 
-    html, body {
+    html { height: 100%; }
+    body {
       min-height: 100%;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-      font-size: 14px;
+      font-size: 15px;
       background: var(--bg);
       color: var(--text);
       line-height: 1.5;
+      -webkit-text-size-adjust: 100%;
     }
 
-    /* ── Setup Screen ─────────────────────────────────────── */
+    /* ══════════════════════════════════════════════════════
+       SETUP SCREEN
+    ══════════════════════════════════════════════════════ */
     #setup-screen {
       display: flex;
       align-items: center;
       justify-content: center;
-      min-height: 100vh;
-      padding: 2rem;
+      min-height: 100dvh;
+      padding: 1.5rem;
     }
 
     .setup-card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 2.25rem;
+      border-radius: var(--r-lg);
+      padding: 2rem;
       width: 100%;
       max-width: 420px;
       box-shadow: 0 4px 24px rgba(0,0,0,0.08);
     }
 
     .setup-icon {
-      width: 44px;
-      height: 44px;
-      background: var(--amber-light);
-      border-radius: var(--radius-md);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      width: 46px; height: 46px;
+      background: var(--amber-lt);
+      border-radius: var(--r-md);
+      display: flex; align-items: center; justify-content: center;
       margin-bottom: 1.25rem;
     }
 
-    .setup-title { font-size: 20px; font-weight: 600; margin-bottom: 0.35rem; }
+    .setup-title { font-size: 20px; font-weight: 700; margin-bottom: 0.3rem; }
     .setup-sub   { font-size: 13px; color: var(--text-2); margin-bottom: 1.75rem; line-height: 1.6; }
 
-    .section-label {
+    .field-label {
       display: block;
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--text-3);
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      margin-bottom: 6px;
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.07em;
+      color: var(--text-3); margin-bottom: 6px;
     }
 
-    input[type="text"],
-    input[type="number"] {
+    input[type="text"], input[type="number"] {
       width: 100%;
-      height: 38px;
-      padding: 0 10px;
+      height: 44px;
+      padding: 0 12px;
       background: var(--surface);
       border: 1px solid var(--border-med);
-      border-radius: var(--radius-sm);
-      font-size: 14px;
+      border-radius: var(--r-sm);
+      font-size: 16px; /* 16px prevents iOS zoom */
       color: var(--text);
       font-family: inherit;
       outline: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
+      transition: border-color .15s, box-shadow .15s;
+      -webkit-appearance: none;
+      appearance: none;
     }
-
-    input[type="text"]:focus,
-    input[type="number"]:focus {
+    input[type="text"]:focus, input[type="number"]:focus {
       border-color: var(--amber);
-      box-shadow: 0 0 0 3px rgba(184,124,32,0.15);
+      box-shadow: 0 0 0 3px rgba(184,124,32,.15);
+    }
+    input[type="number"] {
+      text-align: right;
+      font-family: var(--mono);
+      font-size: 16px;
     }
 
-    input[type="number"] { text-align: right; font-family: var(--mono); }
+    .divider { height: 1px; background: var(--border); margin: 1.5rem 0; }
 
-    .divider {
-      height: 1px;
-      background: var(--border);
-      margin: 1.5rem 0;
-    }
-
-    /* ── Drop Zone ────────────────────────────────────────── */
+    /* Drop zone */
     .drop-zone {
       border: 1.5px dashed var(--border-med);
-      border-radius: var(--radius-md);
+      border-radius: var(--r-md);
       padding: 1.5rem 1rem;
       text-align: center;
       cursor: pointer;
-      transition: border-color 0.15s, background 0.15s;
+      transition: border-color .15s, background .15s;
       position: relative;
     }
-
-    .drop-zone:hover,
-    .drop-zone.dragover {
+    .drop-zone:hover, .drop-zone.dragover {
       border-color: var(--amber);
-      background: var(--amber-light);
+      background: var(--amber-lt);
     }
-
     .drop-zone input[type="file"] {
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-      cursor: pointer;
-      width: 100%;
-      height: 100%;
+      position: absolute; inset: 0;
+      opacity: 0; cursor: pointer;
+      width: 100%; height: 100%;
     }
+    .drop-icon { width: 36px; height: 36px; margin: 0 auto .5rem; color: var(--text-3); }
+    .drop-primary   { font-size: 14px; font-weight: 500; color: var(--text-2); margin-bottom: 2px; }
+    .drop-secondary { font-size: 12px; color: var(--text-3); }
 
-    .drop-icon {
-      width: 36px;
-      height: 36px;
-      margin: 0 auto 0.6rem;
-      color: var(--text-3);
-    }
-
-    .drop-primary   { font-size: 13px; font-weight: 500; color: var(--text-2); margin-bottom: 3px; }
-    .drop-secondary { font-size: 11px; color: var(--text-3); }
-
-    /* ── Materials Status Panel ───────────────────────────── */
+    /* Status panel */
     .mat-status {
-      border-radius: var(--radius-md);
-      padding: 0.75rem 1rem;
+      border-radius: var(--r-md);
+      padding: .75rem 1rem;
       font-size: 13px;
       display: flex;
       align-items: flex-start;
       gap: 10px;
-      margin-top: 0.85rem;
+      margin-top: .85rem;
     }
-
-    .mat-status.loading  { background: var(--surface-2); }
-    .mat-status.ready    { background: var(--success-bg); }
-    .mat-status.error    { background: var(--danger-bg); }
-    .mat-status.parsed   { background: var(--info-bg); }
-
-    .mat-status-icon {
-      width: 18px;
-      height: 18px;
-      flex-shrink: 0;
-      margin-top: 1px;
-    }
-
+    .mat-status.loading { background: var(--surface-2); }
+    .mat-status.ready   { background: var(--ok-bg); }
+    .mat-status.error   { background: var(--bad-bg); }
+    .mat-status.parsed  { background: var(--info-bg); }
+    .mat-status-icon { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
     .mat-status-body { flex: 1; }
-    .mat-status-title { font-weight: 600; margin-bottom: 2px; }
-    .mat-status-title.ready  { color: var(--success); }
-    .mat-status-title.error  { color: var(--danger); }
+    .mat-status-title { font-weight: 700; margin-bottom: 2px; }
+    .mat-status-title.ready  { color: var(--ok); }
+    .mat-status-title.error  { color: var(--bad); }
     .mat-status-title.parsed { color: var(--info); }
-    .mat-status-sub   { font-size: 12px; color: var(--text-2); line-height: 1.5; }
+    .mat-status-sub { font-size: 12px; color: var(--text-2); line-height: 1.5; }
 
-    .replace-link {
-      background: none;
-      border: none;
-      color: var(--info);
-      font-size: 12px;
-      font-family: inherit;
-      cursor: pointer;
-      padding: 0;
-      text-decoration: underline;
-      margin-top: 4px;
-      display: inline-block;
-    }
-
-    /* ── Buttons ──────────────────────────────────────────── */
-    .btn-primary {
-      width: 100%;
-      height: 40px;
-      background: var(--amber);
-      color: #fff;
-      border: none;
-      border-radius: var(--radius-sm);
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      margin-top: 1.25rem;
-      transition: background 0.15s;
-    }
-    .btn-primary:hover    { background: var(--amber-dark); }
-    .btn-primary:disabled { background: var(--surface-2); color: var(--text-3); cursor: not-allowed; }
-
-    /* ── Spinner ──────────────────────────────────────────── */
+    /* Spinner */
     @keyframes spin { to { transform: rotate(360deg); } }
     .spinner {
       width: 16px; height: 16px;
       border: 2px solid var(--border-med);
       border-top-color: var(--amber);
       border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      display: inline-block;
+      animation: spin .7s linear infinite;
       flex-shrink: 0;
     }
 
-    /* ── App Shell ────────────────────────────────────────── */
+    /* Buttons */
+    .btn-primary {
+      width: 100%; height: 48px;
+      background: var(--amber); color: #fff;
+      border: none; border-radius: var(--r-sm);
+      font-size: 16px; font-weight: 700;
+      cursor: pointer; margin-top: 1.25rem;
+      transition: background .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-primary:hover    { background: var(--amber-dk); }
+    .btn-primary:disabled { background: var(--surface-2); color: var(--text-3); cursor: not-allowed; }
+
+    /* ══════════════════════════════════════════════════════
+       APP SHELL
+    ══════════════════════════════════════════════════════ */
     #app { display: none; }
 
+    /* Top bar */
     .top-bar {
-      position: sticky;
-      top: 0;
-      z-index: 100;
+      position: sticky; top: 0; z-index: 200;
+      height: var(--top-h);
       background: var(--surface);
       border-bottom: 1px solid var(--border);
-      padding: 0.65rem 1.25rem;
-      display: flex;
-      align-items: center;
-      gap: 1rem;
+      padding: 0 1rem;
+      display: flex; align-items: center; gap: .75rem;
     }
-
-    .top-bar-title { font-size: 15px; font-weight: 600; flex: 1; }
-    .top-bar-meta  { font-size: 12px; color: var(--text-2); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-
+    .top-bar-title { font-size: 15px; font-weight: 700; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .top-bar-meta  { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
     .dot {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: var(--text-3);
-      display: inline-block;
-      flex-shrink: 0;
-      transition: background 0.3s;
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--text-3); flex-shrink: 0;
+      transition: background .3s;
     }
-    .dot.live   { background: var(--success); }
-    .dot.error  { background: var(--danger); }
+    .dot.live   { background: var(--ok); }
+    .dot.error  { background: var(--bad); }
     .dot.saving { background: var(--amber); animation: pulse 1s ease-in-out infinite; }
-
-    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
-
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+    .conn-text { font-size: 12px; color: var(--text-2); }
     .top-link {
       background: none; border: none;
-      color: var(--info); font-size: 12px;
-      font-family: inherit; cursor: pointer;
-      padding: 0; text-decoration: underline;
+      color: var(--info); font-size: 13px;
+      font-family: inherit; cursor: pointer; padding: 0;
+      -webkit-tap-highlight-color: transparent;
     }
 
-    /* ── Content ──────────────────────────────────────────── */
-    .content { padding: 1rem 1.25rem; }
-
-    .stats-row {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
-      margin-bottom: 0.85rem;
-    }
-
-    .stat {
+    /* Tab bar */
+    .tab-bar {
+      position: sticky; top: var(--top-h); z-index: 190;
       background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+    }
+    .tab-btn {
+      flex: 1; height: var(--tab-h);
+      background: none; border: none;
+      font-size: 14px; font-weight: 600;
+      color: var(--text-3); font-family: inherit;
+      cursor: pointer; position: relative;
+      transition: color .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .tab-btn.active { color: var(--amber); }
+    .tab-btn.active::after {
+      content: '';
+      position: absolute; bottom: 0; left: 12%; right: 12%; height: 2px;
+      background: var(--amber); border-radius: 2px 2px 0 0;
     }
 
-    .stat-label {
-      font-size: 10px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.06em;
-      color: var(--text-3); margin-bottom: 4px;
+    /* ══════════════════════════════════════════════════════
+       COUNT TAB
+    ══════════════════════════════════════════════════════ */
+    #count-tab { display: block; }
+    #totals-tab { display: none; }
+
+    /* Sticky toolbar */
+    .count-toolbar {
+      position: sticky;
+      top: calc(var(--top-h) + var(--tab-h));
+      z-index: 150;
+      background: var(--bg);
+      padding: .75rem 1rem;
+      display: flex; flex-direction: column; gap: .5rem;
+      border-bottom: 1px solid var(--border);
     }
 
-    .stat-value { font-size: 22px; font-weight: 600; }
-    .stat-value.amber { color: var(--amber); }
-    .stat-value.green { color: var(--success); }
-    .stat-value.red   { color: var(--danger); }
+    #search-input { font-size: 16px; }
 
-    .progress-wrap {
-      height: 4px; background: var(--surface-2);
-      border-radius: 2px; margin-bottom: 0.85rem; overflow: hidden;
-    }
-    .progress-fill {
-      height: 100%; background: var(--amber);
-      border-radius: 2px; transition: width 0.5s ease;
-    }
-
-    /* ── Toolbar ──────────────────────────────────────────── */
-    .toolbar {
-      display: flex; gap: 8px; align-items: center;
-      margin-bottom: 0.85rem; flex-wrap: wrap;
-    }
-
-    #search-input { flex: 1; min-width: 160px; height: 34px; padding: 0 10px; }
-
-    .filter-group { display: flex; gap: 4px; }
+    .filter-row { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
+    .filter-row::-webkit-scrollbar { display: none; }
 
     .fbtn {
-      height: 34px; padding: 0 11px;
+      flex-shrink: 0;
+      height: 34px; padding: 0 14px;
       background: var(--surface);
       border: 1px solid var(--border-med);
-      border-radius: var(--radius-sm);
-      font-size: 12px; font-weight: 500;
+      border-radius: 99px;
+      font-size: 13px; font-weight: 500;
       color: var(--text-2); font-family: inherit;
       cursor: pointer; white-space: nowrap;
-      transition: background 0.12s, color 0.12s, border-color 0.12s;
+      transition: background .12s, color .12s, border-color .12s;
+      -webkit-tap-highlight-color: transparent;
     }
-    .fbtn:hover   { background: var(--surface-2); }
-    .fbtn.active  { background: var(--amber); border-color: var(--amber); color: #fff; }
+    .fbtn:hover  { background: var(--surface-2); }
+    .fbtn.active { background: var(--amber); border-color: var(--amber); color: #fff; }
 
     .export-btn {
-      height: 34px; padding: 0 12px;
+      flex-shrink: 0;
+      height: 34px; padding: 0 14px;
       background: var(--surface);
       border: 1px solid var(--border-med);
-      border-radius: var(--radius-sm);
-      font-size: 12px; font-weight: 500;
+      border-radius: 99px;
+      font-size: 13px; font-weight: 500;
       color: var(--text-2); font-family: inherit;
-      cursor: pointer; margin-left: auto; white-space: nowrap;
-      transition: background 0.12s;
+      cursor: pointer; white-space: nowrap;
+      margin-left: auto;
+      -webkit-tap-highlight-color: transparent;
     }
     .export-btn:hover { background: var(--surface-2); }
 
-    /* ── Table ────────────────────────────────────────────── */
-    .table-wrap {
+    /* ── Material cards (primary mobile view) ─────────── */
+    .mat-list { padding: .75rem 1rem; display: flex; flex-direction: column; gap: .6rem; }
+
+    .mat-card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
+      border-radius: var(--r-md);
       overflow: hidden;
+      transition: box-shadow .15s;
     }
+    .mat-card.counted-card  { border-left: 3px solid var(--ok); }
+    .mat-card.variance-card { border-left: 3px solid var(--bad); }
 
-    table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 720px; }
-
-    .table-scroll { overflow-x: auto; }
-
-    thead tr { background: var(--surface-2); }
-
-    th {
-      padding: 9px 10px; text-align: left;
-      font-size: 10px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.07em;
-      color: var(--text-3); border-bottom: 1px solid var(--border);
-      white-space: nowrap;
-    }
-
-    th.r, td.r { text-align: right; }
-
-    td {
-      padding: 6px 10px;
+    .mat-card-head {
+      display: flex; align-items: baseline; gap: 8px;
+      padding: .6rem .85rem .5rem;
       border-bottom: 1px solid var(--border);
-      vertical-align: middle;
+    }
+    .mat-num  { font-family: var(--mono); font-size: 11px; color: var(--text-3); flex-shrink: 0; }
+    .mat-desc { font-size: 13px; font-weight: 600; flex: 1; line-height: 1.35; }
+
+    .mat-card-body { padding: .65rem .85rem; display: grid; grid-template-columns: 1fr 1fr; gap: .5rem .75rem; align-items: center; }
+
+    .body-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text-3); }
+
+    .sap-val { font-family: var(--mono); font-size: 15px; color: var(--text-2); text-align: right; }
+
+    .qty-input-card {
+      grid-column: 2;
+      width: 100%; height: 44px;
+      padding: 0 12px;
+      font-family: var(--mono); font-size: 18px; font-weight: 700;
+      text-align: right;
+      background: var(--surface-2);
+      border: 1.5px solid var(--border-med);
+      border-radius: var(--r-sm);
+      color: var(--text);
+      outline: none;
+      -webkit-appearance: none; appearance: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .qty-input-card:focus {
+      border-color: var(--amber);
+      box-shadow: 0 0 0 3px rgba(184,124,32,.15);
+      background: var(--surface);
     }
 
-    tr:last-child td { border-bottom: none; }
+    .var-badge {
+      font-family: var(--mono); font-size: 13px; font-weight: 700;
+      text-align: right; align-self: center;
+    }
+    .vb-none { color: var(--text-3); font-weight: 400; }
+    .vb-zero { color: var(--ok); }
+    .vb-pos  { color: var(--ok); }
+    .vb-neg  { color: var(--bad); }
 
-    tr.row-match    td { background: color-mix(in srgb, var(--success-bg) 40%, transparent); }
-    tr.row-variance td { background: color-mix(in srgb, var(--danger-bg)  40%, transparent); }
-
-    tr:hover td { filter: brightness(0.97); }
-    @media (prefers-color-scheme: dark) { tr:hover td { filter: brightness(1.05); } }
-
-    .mat-id  { font-family: var(--mono); font-size: 11px; color: var(--text-2); letter-spacing: 0.02em; }
-    .desc    { font-size: 12px; line-height: 1.4; max-width: 220px; word-break: break-word; }
-    .sap-qty { font-family: var(--mono); font-size: 12px; color: var(--text-2); }
-
-    .qty-input {
-      width: 90px; height: 30px; padding: 0 8px;
-      font-family: var(--mono); font-size: 12px;
-      border-radius: var(--radius-sm);
+    .mat-card-foot {
+      padding: .5rem .85rem .6rem;
+      border-top: 1px solid var(--border);
+      display: flex; flex-direction: column; gap: .4rem;
     }
 
-    .notes-input {
-      height: 30px; width: 115px; padding: 0 8px;
-      font-size: 11px; border-radius: var(--radius-sm);
+    .notes-input-card {
+      width: 100%; height: 38px;
+      padding: 0 10px; font-size: 14px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      color: var(--text-2); font-family: inherit;
+      outline: none;
+      -webkit-appearance: none; appearance: none;
+    }
+    .notes-input-card:focus { border-color: var(--amber); background: var(--surface); }
+    .notes-input-card::placeholder { color: var(--text-3); }
+
+    .by-time { font-size: 11px; color: var(--text-3); }
+
+    /* Row count footer */
+    .list-footer {
+      padding: .6rem 1rem;
+      font-size: 12px; color: var(--text-3);
+      display: flex; justify-content: space-between;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
     }
 
-    .var-cell { font-family: var(--mono); font-size: 12px; font-weight: 700; white-space: nowrap; }
-    .var-none     { color: var(--text-3); font-weight: 400; }
-    .var-zero     { color: var(--success); }
-    .var-positive { color: var(--success); }
-    .var-negative { color: var(--danger); }
-
-    .by-cell {
-      font-size: 11px; color: var(--text-2); white-space: nowrap;
-      max-width: 90px; overflow: hidden; text-overflow: ellipsis;
-    }
-
-    .time-cell { font-size: 10px; color: var(--text-3); white-space: nowrap; }
-
-    .table-footer {
-      padding: 8px 12px; font-size: 11px; color: var(--text-3);
-      border-top: 1px solid var(--border); background: var(--surface-2);
-      display: flex; justify-content: space-between; align-items: center;
-    }
-
+    /* No results */
     .no-rows {
       text-align: center; padding: 3rem 1rem;
       color: var(--text-2); font-size: 14px;
     }
 
-    /* ── Toast ────────────────────────────────────────────── */
+    /* ── Desktop table (shown >= 768px) ───────────────── */
+    .desktop-table-wrap { display: none; }
+
+    @media (min-width: 768px) {
+      .mat-list { display: none; }
+      .desktop-table-wrap {
+        display: block;
+        margin: .75rem 1rem;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r-lg);
+        overflow: hidden;
+      }
+
+      .tbl-scroll { overflow-x: auto; }
+
+      table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 700px; }
+      thead tr { background: var(--surface-2); }
+      th {
+        padding: 9px 10px; text-align: left;
+        font-size: 10px; font-weight: 700;
+        text-transform: uppercase; letter-spacing: .07em;
+        color: var(--text-3); border-bottom: 1px solid var(--border);
+        white-space: nowrap;
+      }
+      th.r, td.r { text-align: right; }
+      td { padding: 6px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+      tr:last-child td { border-bottom: none; }
+      tr.tr-match    td { background: color-mix(in srgb, var(--ok-bg)  40%, transparent); }
+      tr.tr-variance td { background: color-mix(in srgb, var(--bad-bg) 40%, transparent); }
+      tr:hover td { filter: brightness(.97); }
+      @media (prefers-color-scheme: dark) { tr:hover td { filter: brightness(1.05); } }
+
+      .t-mat  { font-family: var(--mono); font-size: 11px; color: var(--text-2); }
+      .t-desc { font-size: 12px; line-height: 1.35; max-width: 220px; word-break: break-word; }
+      .t-sap  { font-family: var(--mono); font-size: 12px; color: var(--text-2); }
+      .t-qty  { width: 88px; height: 32px; padding: 0 8px; font-family: var(--mono); font-size: 13px; border-radius: var(--r-sm); }
+      .t-notes { width: 115px; height: 30px; padding: 0 8px; font-size: 11px; border-radius: var(--r-sm); }
+      .t-var  { font-family: var(--mono); font-size: 12px; font-weight: 700; white-space: nowrap; }
+      .tv-none { color: var(--text-3); font-weight: 400; }
+      .tv-zero, .tv-pos { color: var(--ok); }
+      .tv-neg  { color: var(--bad); }
+      .t-by   { font-size: 11px; color: var(--text-2); white-space: nowrap; }
+      .t-time { font-size: 10px; color: var(--text-3); white-space: nowrap; }
+
+      .tbl-footer {
+        padding: 8px 12px; font-size: 11px; color: var(--text-3);
+        border-top: 1px solid var(--border); background: var(--surface-2);
+        display: flex; justify-content: space-between;
+      }
+    }
+
+    /* ══════════════════════════════════════════════════════
+       TOTALS TAB
+    ══════════════════════════════════════════════════════ */
+    .totals-content { padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
+
+    /* Progress card */
+    .progress-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      padding: 1.25rem;
+    }
+    .progress-card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text-3); margin-bottom: .85rem; }
+
+    .progress-bar-wrap { height: 10px; background: var(--surface-2); border-radius: 5px; overflow: hidden; margin-bottom: .85rem; }
+    .progress-bar-fill { height: 100%; background: var(--amber); border-radius: 5px; transition: width .5s ease; }
+
+    .progress-nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+    .prog-num { text-align: center; }
+    .prog-num-val { font-size: 24px; font-weight: 700; display: block; }
+    .prog-num-val.amber { color: var(--amber); }
+    .prog-num-val.green { color: var(--ok); }
+    .prog-num-val.muted { color: var(--text-2); }
+    .prog-num-label { font-size: 11px; color: var(--text-3); }
+
+    /* Summary stats */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: .6rem;
+    }
+
+    @media (min-width: 480px) { .summary-grid { grid-template-columns: repeat(4, 1fr); } }
+
+    .sum-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: .85rem 1rem;
+    }
+    .sum-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); margin-bottom: 4px; }
+    .sum-val   { font-size: 18px; font-weight: 700; font-family: var(--mono); }
+    .sum-val.ok  { color: var(--ok); }
+    .sum-val.bad { color: var(--bad); }
+
+    /* Section heading */
+    .section-heading {
+      font-size: 13px; font-weight: 700; color: var(--text-2);
+      padding: .5rem 0 .4rem;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .section-count {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      font-size: 11px; font-weight: 700;
+      padding: 1px 8px; color: var(--text-3);
+    }
+    .section-count.bad { background: var(--bad-bg); color: var(--bad); border-color: transparent; }
+
+    /* Variance / uncounted lists */
+    .result-list {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      overflow: hidden;
+    }
+
+    .result-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: .25rem .75rem;
+      padding: .7rem .9rem;
+      border-bottom: 1px solid var(--border);
+      align-items: center;
+    }
+    .result-item:last-child { border-bottom: none; }
+
+    .ri-desc  { font-size: 13px; font-weight: 500; line-height: 1.35; }
+    .ri-id    { font-family: var(--mono); font-size: 11px; color: var(--text-3); }
+    .ri-qtys  { font-size: 12px; color: var(--text-2); grid-column: 1; }
+    .ri-var   { font-family: var(--mono); font-size: 14px; font-weight: 700; text-align: right; }
+    .ri-var.pos { color: var(--ok); }
+    .ri-var.neg { color: var(--bad); }
+    .ri-sap   { font-family: var(--mono); font-size: 13px; color: var(--text-2); text-align: right; grid-row: 1 / span 2; align-self: center; }
+
+    .empty-section {
+      text-align: center; padding: 1.5rem;
+      color: var(--text-3); font-size: 13px;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       TOAST
+    ══════════════════════════════════════════════════════ */
     #toast {
-      position: fixed; bottom: 1.5rem; right: 1.5rem;
+      position: fixed; bottom: 1.25rem; left: 50%; transform: translateX(-50%);
       background: var(--text); color: var(--bg);
-      padding: 10px 16px; border-radius: var(--radius-md);
-      font-size: 13px; opacity: 0; pointer-events: none;
-      transition: opacity 0.2s; z-index: 9999;
+      padding: 10px 18px; border-radius: 99px;
+      font-size: 13px; font-weight: 500;
+      opacity: 0; pointer-events: none;
+      transition: opacity .2s; z-index: 9999;
+      white-space: nowrap; max-width: calc(100vw - 2rem);
     }
     #toast.show { opacity: 1; }
-
-    /* ── Responsive ───────────────────────────────────────── */
-    @media (max-width: 680px) {
-      .stats-row { grid-template-columns: repeat(2, 1fr); }
-      .filter-group { flex-wrap: wrap; }
-      .export-btn { margin-left: 0; }
-    }
   </style>
 </head>
 <body>
 
-<!-- ══════════════════════════════════════════════════════════
+<!-- ══════════════════════════════════════════════════════
      SETUP SCREEN
-══════════════════════════════════════════════════════════ -->
+══════════════════════════════════════════════════════ -->
 <div id="setup-screen">
   <div class="setup-card">
-
     <div class="setup-icon">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
            stroke="#B87C20" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -468,28 +572,19 @@
         <line x1="9" y1="16" x2="13" y2="16"/>
       </svg>
     </div>
-
     <div class="setup-title">Cerritos Physical Count</div>
     <div class="setup-sub">17AG · Cerritos Warehouse, CA<br>All entries sync live with your team.</div>
 
-    <!-- Step 1: Name -->
-    <label class="section-label" for="setup-name">Your name or initials</label>
-    <input id="setup-name" type="text" placeholder="e.g. Albert G." autocomplete="off" />
+    <label class="field-label" for="setup-name">Your name or initials</label>
+    <input id="setup-name" type="text" placeholder="e.g. Albert G." autocomplete="off"
+           autocorrect="off" autocapitalize="words" />
 
     <div class="divider"></div>
 
-    <!-- Step 2: Materials -->
-    <label class="section-label">Inventory file</label>
-
-    <!-- Drop zone (hidden once materials are confirmed) -->
+    <label class="field-label">Inventory file</label>
     <div id="drop-zone" class="drop-zone"
-         ondragover="onDragOver(event)"
-         ondragleave="onDragLeave(event)"
-         ondrop="onDrop(event)">
-
-      <input type="file" id="file-input" accept=".xlsx,.xls"
-             onchange="onFileInput(event)" />
-
+         ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+      <input type="file" id="file-input" accept=".xlsx,.xls" onchange="onFileInput(event)" />
       <div class="drop-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
              stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -499,10 +594,9 @@
         </svg>
       </div>
       <div class="drop-primary">Drop SAP export here</div>
-      <div class="drop-secondary">or click to browse — .xlsx or .xls</div>
+      <div class="drop-secondary">or tap to browse — .xlsx or .xls</div>
     </div>
 
-    <!-- Status panel (shown after checking Supabase or parsing a file) -->
     <div id="mat-status" class="mat-status loading" style="display:none;">
       <span class="spinner mat-status-icon"></span>
       <div class="mat-status-body">
@@ -514,390 +608,311 @@
     <button class="btn-primary" id="start-btn" disabled onclick="startCounting()">
       Start Counting
     </button>
-
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════
+<!-- ══════════════════════════════════════════════════════
      APP
-══════════════════════════════════════════════════════════ -->
+══════════════════════════════════════════════════════ -->
 <div id="app">
 
+  <!-- Top bar -->
   <div class="top-bar">
-    <div class="top-bar-title">17AG Cerritos — Physical Count</div>
+    <div class="top-bar-title">17AG Cerritos Count</div>
     <div class="top-bar-meta">
       <span class="dot" id="conn-dot"></span>
-      <span id="conn-label">Connecting…</span>
-      <span>·</span>
-      <span id="user-label"></span>
-      <button class="top-link" onclick="goBack()">change user</button>
+      <span class="conn-text" id="conn-label">…</span>
+      <button class="top-link" onclick="goBack()">← Exit</button>
     </div>
   </div>
 
-  <div class="content">
+  <!-- Tab bar -->
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tab-count"  onclick="switchTab('count')">Count</button>
+    <button class="tab-btn"        id="tab-totals" onclick="switchTab('totals')">Totals</button>
+  </div>
 
-    <div class="stats-row">
-      <div class="stat"><div class="stat-label">Total Items</div><div class="stat-value" id="s-total">—</div></div>
-      <div class="stat"><div class="stat-label">Counted</div><div class="stat-value green" id="s-counted">0</div></div>
-      <div class="stat"><div class="stat-label">Remaining</div><div class="stat-value amber" id="s-remaining">—</div></div>
-      <div class="stat"><div class="stat-label">Variance</div><div class="stat-value red" id="s-variance">0</div></div>
-    </div>
+  <!-- ── Count tab ───────────────────────────────────── -->
+  <div id="count-tab">
 
-    <div class="progress-wrap">
-      <div class="progress-fill" id="prog-fill" style="width:0%"></div>
-    </div>
-
-    <div class="toolbar">
-      <input id="search-input" type="text"
-             placeholder="Search material # or description…"
-             oninput="applyFilters()" />
-      <div class="filter-group">
+    <!-- Sticky toolbar -->
+    <div class="count-toolbar">
+      <input id="search-input" type="text" placeholder="Search material # or description…"
+             oninput="applyFilters()" autocorrect="off" autocomplete="off" />
+      <div class="filter-row">
         <button class="fbtn active" data-f="all"       onclick="setFilter(this)">All</button>
         <button class="fbtn"        data-f="uncounted"  onclick="setFilter(this)">Uncounted</button>
         <button class="fbtn"        data-f="counted"    onclick="setFilter(this)">Counted</button>
         <button class="fbtn"        data-f="variance"   onclick="setFilter(this)">Variance</button>
+        <button class="export-btn"                      onclick="exportCSV()">⬇ CSV</button>
       </div>
-      <button class="export-btn" onclick="exportCSV()">⬇ Export CSV</button>
     </div>
 
-    <div class="table-wrap">
-      <div class="table-scroll">
+    <!-- Mobile card list -->
+    <div class="mat-list" id="card-list"></div>
+
+    <!-- Desktop table -->
+    <div class="desktop-table-wrap">
+      <div class="tbl-scroll">
         <table>
           <thead>
             <tr>
-              <th style="width:92px">Material</th>
+              <th style="width:90px">Material</th>
               <th>Description</th>
-              <th class="r" style="width:82px">SAP Qty</th>
-              <th class="r" style="width:98px">Physical Qty</th>
-              <th class="r" style="width:82px">Variance</th>
+              <th class="r" style="width:80px">SAP Qty</th>
+              <th class="r" style="width:96px">Physical Qty</th>
+              <th class="r" style="width:80px">Variance</th>
               <th style="width:95px">Counted By</th>
               <th style="width:120px">Notes</th>
-              <th style="width:65px">Time</th>
+              <th style="width:60px">Time</th>
             </tr>
           </thead>
           <tbody id="tbl-body"></tbody>
         </table>
       </div>
-      <div class="table-footer">
-        <span id="row-count-label">—</span>
+      <div class="tbl-footer">
+        <span id="row-count-desktop">—</span>
         <span id="last-sync"></span>
       </div>
     </div>
 
+    <!-- Shared footer for mobile -->
+    <div class="list-footer" id="list-footer-mobile">
+      <span id="row-count-mobile">—</span>
+      <span id="last-sync-mobile"></span>
+    </div>
+
+  </div><!-- /count-tab -->
+
+  <!-- ── Totals tab ──────────────────────────────────── -->
+  <div id="totals-tab">
+    <div class="totals-content" id="totals-content">
+      <!-- rendered by renderTotals() -->
+    </div>
   </div>
-</div>
+
+</div><!-- /app -->
 
 <div id="toast"></div>
 
-<!-- ══════════════════════════════════════════════════════════
+<!-- ══════════════════════════════════════════════════════
      SCRIPTS
-══════════════════════════════════════════════════════════ -->
+══════════════════════════════════════════════════════ -->
 <script>
-  /* ─────────────────────────────────────────────────────────
-     CONFIG — paste your anon key from Supabase > Settings > API
-  ───────────────────────────────────────────────────────── */
+  /* ── Config ─────────────────────────────────────────── */
   const SUPABASE_URL      = 'https://easfrwilbxypcdooawtt.supabase.co';
   const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
   const MAT_TABLE         = 'cerritos_materials';
   const CNT_TABLE         = 'cerritos_counts';
 
-  /* ── State ────────────────────────────────────────────── */
+  /* ── State ───────────────────────────────────────────── */
   let db           = null;
-  let MATERIALS    = [];          // [{ material_id, description, sap_qty }]
-  let counts       = {};          // { material_id: row }
-  let parsedRows   = null;        // parsed but not yet uploaded
+  let MATERIALS    = [];
+  let counts       = {};
+  let parsedRows   = null;
   let currentUser  = '';
   let activeFilter = 'all';
   let saveTimers   = {};
+  let activeTab    = 'count';
 
-  /* ── Init Supabase ────────────────────────────────────── */
+  /* ── Supabase ─────────────────────────────────────────── */
   function initSupabase() {
-    const { createClient } = supabase;
-    db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   }
 
   /* ══════════════════════════════════════════════════════
-     SETUP — name input & file handling
+     SETUP
   ══════════════════════════════════════════════════════ */
-  const nameInput  = document.getElementById('setup-name');
-  const startBtn   = document.getElementById('start-btn');
-  const dropZone   = document.getElementById('drop-zone');
-  const fileInput  = document.getElementById('file-input');
-  const matStatus  = document.getElementById('mat-status');
+  const nameInput = document.getElementById('setup-name');
+  const startBtn  = document.getElementById('start-btn');
+  const dropZone  = document.getElementById('drop-zone');
 
   nameInput.addEventListener('input', evaluateStartBtn);
-  nameInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !startBtn.disabled) startCounting();
-  });
+  nameInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !startBtn.disabled) startCounting(); });
 
-  /* Drag & Drop */
-  function onDragOver(e) {
-    e.preventDefault();
-    dropZone.classList.add('dragover');
-  }
-  function onDragLeave() {
-    dropZone.classList.remove('dragover');
-  }
+  function onDragOver(e) { e.preventDefault(); dropZone.classList.add('dragover'); }
+  function onDragLeave()  { dropZone.classList.remove('dragover'); }
   function onDrop(e) {
-    e.preventDefault();
-    dropZone.classList.remove('dragover');
-    const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
+    e.preventDefault(); dropZone.classList.remove('dragover');
+    const f = e.dataTransfer.files[0]; if (f) handleFile(f);
   }
-  function onFileInput(e) {
-    const file = e.target.files[0];
-    if (file) handleFile(file);
-  }
+  function onFileInput(e) { const f = e.target.files[0]; if (f) handleFile(f); }
 
-  /* ── Parse Excel ──────────────────────────────────────── */
   function handleFile(file) {
     if (!file.name.match(/\.(xlsx|xls)$/i)) {
-      showMatStatus('error', 'Unsupported file type', 'Please upload a .xlsx or .xls file.');
-      return;
+      showMatStatus('error', 'Unsupported file', 'Upload a .xlsx or .xls file.'); return;
     }
-
     showMatStatus('loading', 'Reading file…', file.name);
-
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = e => {
       try {
         const wb   = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
         const ws   = wb.Sheets[wb.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
-        /* Detect header row — find the row containing "Material" */
-        let headerIdx = -1;
+        let hIdx = -1;
         for (let i = 0; i < Math.min(10, rows.length); i++) {
-          if (rows[i].some(c => String(c).trim() === 'Material')) {
-            headerIdx = i;
-            break;
-          }
+          if (rows[i].some(c => String(c).trim() === 'Material')) { hIdx = i; break; }
         }
+        if (hIdx === -1) { showMatStatus('error', 'Unrecognized format', 'Cannot find "Material" header row.'); return; }
 
-        if (headerIdx === -1) {
-          showMatStatus('error', 'Unrecognized format',
-            'Could not find a "Material" column. Make sure this is a SAP SAPUI5 export.');
-          return;
-        }
-
-        const headers = rows[headerIdx].map(c => String(c).trim());
-        const matIdx  = headers.findIndex(h => h === 'Material');
-        const descIdx = headers.findIndex(h => h === 'Material Description');
-        const qtyIdx  = headers.findIndex(h => h === 'Unrestricted Stock');
-
+        const hdrs    = rows[hIdx].map(c => String(c).trim());
+        const matIdx  = hdrs.findIndex(h => h === 'Material');
+        const descIdx = hdrs.findIndex(h => h === 'Material Description');
+        const qtyIdx  = hdrs.findIndex(h => h === 'Unrestricted Stock');
         const missing = [];
-        if (matIdx  === -1) missing.push('"Material"');
-        if (descIdx === -1) missing.push('"Material Description"');
-        if (qtyIdx  === -1) missing.push('"Unrestricted Stock"');
+        if (matIdx  < 0) missing.push('"Material"');
+        if (descIdx < 0) missing.push('"Material Description"');
+        if (qtyIdx  < 0) missing.push('"Unrestricted Stock"');
+        if (missing.length) { showMatStatus('error', 'Missing columns', missing.join(', ')); return; }
 
-        if (missing.length) {
-          showMatStatus('error', 'Missing columns',
-            `Could not find: ${missing.join(', ')}. Check the export format.`);
-          return;
-        }
-
-        /* Parse data rows */
         const parsed = [];
-        for (let i = headerIdx + 1; i < rows.length; i++) {
-          const row  = rows[i];
-          const id   = parseInt(row[matIdx], 10);
-          const desc = String(row[descIdx] || '').trim();
-          const qty  = parseFloat(row[qtyIdx]) || 0;
+        for (let i = hIdx + 1; i < rows.length; i++) {
+          const r = rows[i];
+          const id = parseInt(r[matIdx], 10);
+          const desc = String(r[descIdx] || '').trim();
+          const qty  = parseFloat(r[qtyIdx]) || 0;
           if (!id || !desc) continue;
           parsed.push({ material_id: id, description: desc, sap_qty: qty });
         }
-
-        if (parsed.length === 0) {
-          showMatStatus('error', 'No rows found', 'The file was parsed but contained no valid material rows.');
-          return;
-        }
+        if (!parsed.length) { showMatStatus('error', 'No rows found', 'File parsed but contained no material rows.'); return; }
 
         parsedRows = parsed;
-        showMatStatus('parsed',
-          `${parsed.length} materials ready`,
-          `From: ${file.name} — will upload to Supabase when you start counting.`
-        );
+        showMatStatus('parsed', `${parsed.length} materials ready`, `From: ${file.name}`);
         evaluateStartBtn();
-
       } catch (err) {
-        console.error(err);
         showMatStatus('error', 'Parse error', err.message || 'Could not read the file.');
       }
     };
     reader.readAsArrayBuffer(file);
   }
 
-  /* ── Status panel helper ──────────────────────────────── */
   function showMatStatus(type, title, sub) {
-    matStatus.style.display   = 'flex';
-    matStatus.className       = `mat-status ${type}`;
-
-    const iconEl  = matStatus.querySelector('.mat-status-icon');
-    const titleEl = document.getElementById('mat-status-title');
-    const subEl   = document.getElementById('mat-status-sub');
-
-    titleEl.className = `mat-status-title ${type}`;
-    titleEl.textContent = title;
-    subEl.textContent   = sub || '';
-
-    /* Icon */
+    const el = document.getElementById('mat-status');
+    el.style.display = 'flex';
+    el.className = `mat-status ${type}`;
+    document.getElementById('mat-status-title').className = `mat-status-title ${type}`;
+    document.getElementById('mat-status-title').textContent = title;
+    document.getElementById('mat-status-sub').textContent = sub || '';
+    const iconEl = el.querySelector('.mat-status-icon');
     if (type === 'loading') {
       iconEl.outerHTML = `<span class="spinner mat-status-icon"></span>`;
     } else {
-      const icons = {
-        ready:  `<svg class="mat-status-icon" viewBox="0 0 20 20" fill="#2A7A3B"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>`,
-        parsed: `<svg class="mat-status-icon" viewBox="0 0 20 20" fill="#185FA5"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v4a1 1 0 102 0V7zm-1 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>`,
-        error:  `<svg class="mat-status-icon" viewBox="0 0 20 20" fill="#A32D2D"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>`
+      const fill = { ready: '#2A7A3B', parsed: '#185FA5', error: '#A32D2D' }[type] || '#A32D2D';
+      const paths = {
+        ready:  'M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z',
+        parsed: 'M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v4a1 1 0 102 0V7zm-1 8a1 1 0 100-2 1 1 0 000 2z',
+        error:  'M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z'
       };
-      const current = matStatus.querySelector('.mat-status-icon');
-      if (current) current.outerHTML = icons[type] || icons.error;
+      const cur = el.querySelector('.mat-status-icon');
+      if (cur) cur.outerHTML = `<svg class="mat-status-icon" viewBox="0 0 20 20" fill="${fill}"><path fill-rule="evenodd" d="${paths[type]||paths.error}" clip-rule="evenodd"/></svg>`;
     }
   }
 
   function evaluateStartBtn() {
-    const hasName  = nameInput.value.trim().length > 0;
-    const hasMats  = MATERIALS.length > 0 || parsedRows !== null;
-    startBtn.disabled = !(hasName && hasMats);
+    startBtn.disabled = !(nameInput.value.trim() && (MATERIALS.length || parsedRows));
   }
 
-  /* ── Check Supabase for existing materials on page load ── */
   async function checkExistingMaterials() {
     showMatStatus('loading', 'Checking for existing data…', '');
-
     try {
-      const { data, error } = await db
-        .from(MAT_TABLE)
-        .select('material_id, description, sap_qty, uploaded_by, uploaded_at')
-        .order('material_id', { ascending: true });
-
+      const { data, error } = await db.from(MAT_TABLE).select('material_id,description,sap_qty,uploaded_by,uploaded_at').order('material_id');
       if (error) throw error;
-
-      if (data && data.length > 0) {
+      if (data && data.length) {
         MATERIALS = data;
-        const first      = data[0];
-        const uploadDate = first.uploaded_at
-          ? new Date(first.uploaded_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-          : '';
-        const byLine = first.uploaded_by ? ` by ${first.uploaded_by}` : '';
-
-        showMatStatus('ready',
-          `${data.length} materials loaded`,
-          `Uploaded${byLine} on ${uploadDate}. Drop a new file above to replace.`
-        );
-        evaluateStartBtn();
+        const f = data[0];
+        const d = f.uploaded_at ? new Date(f.uploaded_at).toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' }) : '';
+        showMatStatus('ready', `${data.length} materials loaded`, `${f.uploaded_by ? 'By ' + f.uploaded_by + ' · ' : ''}${d}. Drop a new file above to replace.`);
       } else {
-        showMatStatus('error', 'No materials found', 'Upload the SAP Excel export above to start a count session.');
+        showMatStatus('error', 'No materials found', 'Upload the SAP Excel export to start.');
       }
-
     } catch (err) {
-      console.error('Material check error:', err);
-      showMatStatus('error', 'Could not reach Supabase', 'Check your SUPABASE_ANON_KEY and network connection.');
+      showMatStatus('error', 'Supabase error', 'Check SUPABASE_ANON_KEY and network.');
     }
+    evaluateStartBtn();
   }
 
-  /* ── Start counting ────────────────────────────────────── */
   async function startCounting() {
     const name = nameInput.value.trim();
     if (!name || (!MATERIALS.length && !parsedRows)) return;
-
     currentUser = name;
     try { localStorage.setItem('cerritos_user', name); } catch(e) {}
-
     document.getElementById('setup-screen').style.display = 'none';
-    document.getElementById('app').style.display          = 'block';
-    document.getElementById('user-label').textContent     = 'Counting as: ' + name;
-
+    document.getElementById('app').style.display = 'block';
     setConnStatus('connecting');
-
-    /* If a file was parsed, upload to Supabase first */
-    if (parsedRows) {
-      await uploadMaterials(parsedRows);
-      MATERIALS  = parsedRows;
-      parsedRows = null;
-    }
-
+    if (parsedRows) { await uploadMaterials(parsedRows); MATERIALS = parsedRows; parsedRows = null; }
     await loadCounts();
-    renderTable();
+    renderAll();
     subscribeRealtime();
   }
 
-  /* ── Upload parsed materials to Supabase ─────────────── */
   async function uploadMaterials(rows) {
-    setConnStatus('connecting');
     showToast(`Uploading ${rows.length} materials…`);
-
     try {
-      /* Delete all existing materials (counts cascade-delete too) */
       await db.from(MAT_TABLE).delete().gt('material_id', 0);
-
-      /* Stamp each row with uploader info */
-      const stamped = rows.map(r => ({
-        ...r,
-        uploaded_by: currentUser,
-        uploaded_at: new Date().toISOString()
-      }));
-
-      /* Batch insert in chunks of 500 to stay within request limits */
-      const CHUNK = 500;
-      for (let i = 0; i < stamped.length; i += CHUNK) {
-        const { error } = await db.from(MAT_TABLE).insert(stamped.slice(i, i + CHUNK));
+      const stamped = rows.map(r => ({ ...r, uploaded_by: currentUser, uploaded_at: new Date().toISOString() }));
+      for (let i = 0; i < stamped.length; i += 500) {
+        const { error } = await db.from(MAT_TABLE).insert(stamped.slice(i, i + 500));
         if (error) throw error;
       }
-
       showToast(`${rows.length} materials uploaded`);
     } catch (err) {
-      console.error('Upload error:', err);
-      showToast('Material upload failed — check console');
+      showToast('Upload failed — check console');
     }
   }
 
   function goBack() {
     document.getElementById('setup-screen').style.display = 'flex';
-    document.getElementById('app').style.display          = 'none';
-    /* Reset name input but keep parsed file data & MATERIALS */
-    nameInput.value  = '';
-    startBtn.disabled = true;
+    document.getElementById('app').style.display = 'none';
+    nameInput.value = ''; startBtn.disabled = true;
   }
 
   /* ══════════════════════════════════════════════════════
-     REALTIME & COUNT DATA
+     TAB SWITCHING
+  ══════════════════════════════════════════════════════ */
+  function switchTab(name) {
+    activeTab = name;
+    document.getElementById('count-tab').style.display  = name === 'count'  ? 'block' : 'none';
+    document.getElementById('totals-tab').style.display = name === 'totals' ? 'block' : 'none';
+    document.getElementById('tab-count').classList.toggle('active',  name === 'count');
+    document.getElementById('tab-totals').classList.toggle('active', name === 'totals');
+    if (name === 'totals') renderTotals();
+  }
+
+  /* ══════════════════════════════════════════════════════
+     DATA
   ══════════════════════════════════════════════════════ */
   async function loadCounts() {
     try {
       const { data, error } = await db.from(CNT_TABLE).select('*');
       if (error) throw error;
       counts = {};
-      (data || []).forEach(row => { counts[row.material_id] = row; });
+      (data || []).forEach(r => { counts[r.material_id] = r; });
       setConnStatus('live');
       updateLastSync();
     } catch (err) {
-      console.error('Load counts error:', err);
       setConnStatus('error');
-      showToast('Could not load counts — check Supabase config');
+      showToast('Could not load counts');
     }
   }
 
   function subscribeRealtime() {
     db.channel('cerritos_live')
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: CNT_TABLE },
-        (payload) => {
-          const id = (payload.new || payload.old || {}).material_id;
-          if (!id) return;
-          if (payload.eventType === 'DELETE') delete counts[id];
-          else counts[id] = payload.new;
-          updateRowDOM(id);
-          updateStats();
-          updateLastSync();
-        }
-      )
-      .subscribe(status => {
-        if (status === 'SUBSCRIBED')    setConnStatus('live');
-        if (status === 'CHANNEL_ERROR') setConnStatus('error');
+      .on('postgres_changes', { event: '*', schema: 'public', table: CNT_TABLE }, payload => {
+        const id = (payload.new || payload.old || {}).material_id;
+        if (!id) return;
+        if (payload.eventType === 'DELETE') delete counts[id];
+        else counts[id] = payload.new;
+        updateRowDOM(id);
+        if (activeTab === 'totals') renderTotals();
+        updateLastSync();
+      })
+      .subscribe(s => {
+        if (s === 'SUBSCRIBED')    setConnStatus('live');
+        if (s === 'CHANNEL_ERROR') setConnStatus('error');
       });
   }
 
-  /* ── Save a single count row (debounced) ─────────────── */
   function scheduleSave(materialId) {
     if (saveTimers[materialId]) clearTimeout(saveTimers[materialId]);
     saveTimers[materialId] = setTimeout(() => saveRow(materialId), 700);
@@ -906,186 +921,315 @@
   async function saveRow(materialId) {
     setConnStatus('saving');
     const c = counts[materialId];
-
     try {
       if (!c) {
         const { error } = await db.from(CNT_TABLE).delete().eq('material_id', materialId);
         if (error) throw error;
       } else {
         const { error } = await db.from(CNT_TABLE).upsert({
-          material_id:  materialId,
-          physical_qty: c.physical_qty,
-          counted_by:   c.counted_by,
-          notes:        c.notes || '',
-          updated_at:   new Date().toISOString()
+          material_id: materialId, physical_qty: c.physical_qty,
+          counted_by: c.counted_by, notes: c.notes || '',
+          updated_at: new Date().toISOString()
         }, { onConflict: 'material_id' });
         if (error) throw error;
       }
       setConnStatus('live');
     } catch (err) {
-      console.error('Save error:', err);
-      setConnStatus('error');
-      showToast('Save failed — check connection');
+      setConnStatus('error'); showToast('Save failed');
     }
   }
 
-  /* ── Input handlers ───────────────────────────────────── */
+  /* ══════════════════════════════════════════════════════
+     INPUT HANDLERS
+  ══════════════════════════════════════════════════════ */
   function onQtyChange(materialId, inputEl) {
     const val = inputEl.value.trim();
     inputEl.style.borderColor = '';
-
     if (val === '') {
       delete counts[materialId];
     } else {
       const qty = parseInt(val, 10);
-      if (isNaN(qty) || qty < 0) { inputEl.style.borderColor = 'var(--danger)'; return; }
-      const existing = counts[materialId] || {};
+      if (isNaN(qty) || qty < 0) { inputEl.style.borderColor = 'var(--bad)'; return; }
       counts[materialId] = {
-        material_id:  materialId,
-        physical_qty: qty,
-        counted_by:   currentUser,
-        notes:        existing.notes || '',
-        updated_at:   new Date().toISOString()
+        material_id: materialId, physical_qty: qty,
+        counted_by: currentUser, notes: (counts[materialId] || {}).notes || '',
+        updated_at: new Date().toISOString()
       };
     }
-
     updateRowDOM(materialId);
-    updateStats();
+    if (activeTab === 'totals') renderTotals();
     scheduleSave(materialId);
   }
 
   function onNotesChange(materialId, inputEl) {
-    if (counts[materialId]) {
-      counts[materialId].notes = inputEl.value.trim();
-      scheduleSave(materialId);
-    }
+    if (counts[materialId]) { counts[materialId].notes = inputEl.value.trim(); scheduleSave(materialId); }
   }
 
-  /* ── DOM update for a single row ─────────────────────── */
-  function fmtTime(isoStr) {
-    if (!isoStr) return '';
-    return new Date(isoStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  /* ══════════════════════════════════════════════════════
+     DOM HELPERS
+  ══════════════════════════════════════════════════════ */
+  function fmtTime(iso) {
+    if (!iso) return '';
+    return new Date(iso).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
   }
 
-  function varInfo(physQty, sapQty) {
-    if (physQty === null || physQty === undefined)
-      return { cls: 'var-none', text: '—' };
-    const diff = physQty - sapQty;
+  function varInfo(phys, sap) {
+    if (phys === null || phys === undefined) return { cls: 'vb-none', tcls: 'tv-none', text: '—' };
+    const d = phys - sap;
+    const t = (d >= 0 ? '+' : '') + d.toLocaleString();
     return {
-      cls:  diff === 0 ? 'var-zero' : diff > 0 ? 'var-positive' : 'var-negative',
-      text: (diff >= 0 ? '+' : '') + diff.toLocaleString()
+      cls:  d === 0 ? 'vb-zero' : d > 0 ? 'vb-pos' : 'vb-neg',
+      tcls: d === 0 ? 'tv-zero' : d > 0 ? 'tv-pos' : 'tv-neg',
+      text: t
     };
   }
 
+  function escH(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  /* Update a single material's DOM in both card + table */
   function updateRowDOM(materialId) {
     const mat = MATERIALS.find(m => m.material_id === materialId);
     if (!mat) return;
+    const c = counts[materialId];
+    const phys = c ? c.physical_qty : null;
+    const { cls, tcls, text } = varInfo(phys, mat.sap_qty);
+    const by   = c ? (c.counted_by || '') : '';
+    const ts   = c ? fmtTime(c.updated_at) : '';
 
-    const c       = counts[materialId];
-    const physQty = c ? c.physical_qty : null;
-    const { cls, text } = varInfo(physQty, mat.sap_qty);
-
-    const q = (sel) => document.getElementById(sel + materialId);
-
-    const varEl  = q('var-');
-    const byEl   = q('by-');
-    const timeEl = q('time-');
-    const qtyEl  = q('qty-');
-    const row    = q('row-');
-
-    if (varEl)  { varEl.textContent  = text; varEl.className  = 'var-cell ' + cls; }
-    if (byEl)   { byEl.textContent   = c ? (c.counted_by || '') : ''; }
-    if (timeEl) { timeEl.textContent = c ? fmtTime(c.updated_at) : ''; }
-    if (qtyEl && document.activeElement !== qtyEl) {
-      qtyEl.value = physQty !== null && physQty !== undefined ? physQty : '';
+    /* ---- Card ---- */
+    const card = document.getElementById('card-' + materialId);
+    if (card) {
+      card.className = 'mat-card' + (phys !== null ? (phys === mat.sap_qty ? ' counted-card' : ' variance-card') : '');
+      const vb = card.querySelector('.var-badge');
+      if (vb) { vb.textContent = text; vb.className = `var-badge ${cls}`; }
+      const qi = card.querySelector('.qty-input-card');
+      if (qi && document.activeElement !== qi) qi.value = phys !== null ? phys : '';
+      const bt = card.querySelector('.by-time');
+      if (bt) bt.textContent = by ? `${by} · ${ts}` : '';
     }
 
+    /* ---- Table row ---- */
+    const row = document.getElementById('row-' + materialId);
     if (row) {
-      row.classList.remove('row-match', 'row-variance');
-      if (physQty !== null && physQty !== undefined) {
-        row.classList.add(physQty === mat.sap_qty ? 'row-match' : 'row-variance');
-      }
+      row.className = phys !== null ? (phys === mat.sap_qty ? 'tr-match' : 'tr-variance') : '';
+      const tv = document.getElementById('tvar-' + materialId);
+      if (tv) { tv.textContent = text; tv.className = `t-var ${tcls}`; }
+      const tby = document.getElementById('tby-' + materialId);
+      if (tby) tby.textContent = by;
+      const tts = document.getElementById('tts-' + materialId);
+      if (tts) tts.textContent = ts;
+      const tqi = document.getElementById('tqty-' + materialId);
+      if (tqi && document.activeElement !== tqi) tqi.value = phys !== null ? phys : '';
     }
+
+    updateStats();
   }
 
-  /* ── Full table render ────────────────────────────────── */
-  function renderTable() {
-    const tbody = document.getElementById('tbl-body');
-    let html = '';
-
-    MATERIALS.forEach(({ material_id: id, description: desc, sap_qty: sap }) => {
-      const c       = counts[id];
-      const physQty = c ? c.physical_qty : null;
-      const notes   = c ? (c.notes || '') : '';
-      const by      = c ? (c.counted_by || '') : '';
-      const ts      = c ? fmtTime(c.updated_at) : '';
-      const { cls, text } = varInfo(physQty, sap);
-      let rowCls = '';
-      if (physQty !== null && physQty !== undefined)
-        rowCls = physQty === sap ? 'row-match' : 'row-variance';
-
-      html += `<tr id="row-${id}" class="${rowCls}">
-        <td><span class="mat-id">${id}</span></td>
-        <td><span class="desc">${escHtml(desc)}</span></td>
-        <td class="r"><span class="sap-qty">${Number(sap).toLocaleString()}</span></td>
-        <td class="r">
-          <input class="qty-input" id="qty-${id}" type="number" min="0" step="1"
-                 placeholder="—"
-                 value="${physQty !== null && physQty !== undefined ? physQty : ''}"
-                 onchange="onQtyChange(${id},this)"
-                 oninput="onQtyChange(${id},this)" />
-        </td>
-        <td class="r"><span class="var-cell ${cls}" id="var-${id}">${text}</span></td>
-        <td><span class="by-cell" id="by-${id}">${escHtml(by)}</span></td>
-        <td>
-          <input class="notes-input" type="text" placeholder="notes…"
-                 value="${escHtml(notes)}"
-                 onchange="onNotesChange(${id},this)" />
-        </td>
-        <td><span class="time-cell" id="time-${id}">${ts}</span></td>
-      </tr>`;
-    });
-
-    if (!html) {
-      html = `<tr><td colspan="8" class="no-rows">No materials loaded.</td></tr>`;
-    }
-
-    tbody.innerHTML = html;
+  /* ══════════════════════════════════════════════════════
+     RENDER ALL
+  ══════════════════════════════════════════════════════ */
+  function renderAll() {
+    renderCards();
+    renderTable();
     updateStats();
     applyFilters();
   }
 
-  function escHtml(str) {
-    return String(str)
-      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  /* Mobile cards */
+  function renderCards() {
+    const list = document.getElementById('card-list');
+    let html = '';
+    MATERIALS.forEach(({ material_id: id, description: desc, sap_qty: sap }) => {
+      const c    = counts[id];
+      const phys = c ? c.physical_qty : null;
+      const { cls, text } = varInfo(phys, sap);
+      const cardCls = phys !== null ? (phys === sap ? ' counted-card' : ' variance-card') : '';
+      const by  = c ? (c.counted_by || '') : '';
+      const ts  = c ? fmtTime(c.updated_at) : '';
+      html += `
+<div class="mat-card${cardCls}" id="card-${id}">
+  <div class="mat-card-head">
+    <span class="mat-num">${id}</span>
+    <span class="mat-desc">${escH(desc)}</span>
+  </div>
+  <div class="mat-card-body">
+    <span class="body-label">SAP Qty</span>
+    <span class="sap-val">${Number(sap).toLocaleString()}</span>
+    <span class="body-label">Physical</span>
+    <input class="qty-input-card" type="number" inputmode="numeric" min="0" step="1"
+           placeholder="—"
+           value="${phys !== null ? phys : ''}"
+           onchange="onQtyChange(${id},this)" oninput="onQtyChange(${id},this)" />
+    <span class="body-label">Variance</span>
+    <span class="var-badge ${cls}">${text}</span>
+  </div>
+  <div class="mat-card-foot">
+    <input class="notes-input-card" type="text" placeholder="Notes (optional)…"
+           value="${escH(c ? (c.notes || '') : '')}"
+           onchange="onNotesChange(${id},this)" />
+    <span class="by-time">${by ? escH(by) + ' · ' + ts : ''}</span>
+  </div>
+</div>`;
+    });
+    list.innerHTML = html || `<div class="no-rows">No materials loaded.</div>`;
   }
 
-  /* ── Stats ────────────────────────────────────────────── */
-  function updateStats() {
+  /* Desktop table */
+  function renderTable() {
+    const tbody = document.getElementById('tbl-body');
+    let html = '';
+    MATERIALS.forEach(({ material_id: id, description: desc, sap_qty: sap }) => {
+      const c    = counts[id];
+      const phys = c ? c.physical_qty : null;
+      const { tcls, text } = varInfo(phys, sap);
+      const rowCls = phys !== null ? (phys === sap ? 'tr-match' : 'tr-variance') : '';
+      html += `<tr id="row-${id}" class="${rowCls}">
+        <td><span class="t-mat">${id}</span></td>
+        <td><span class="t-desc">${escH(desc)}</span></td>
+        <td class="r"><span class="t-sap">${Number(sap).toLocaleString()}</span></td>
+        <td class="r">
+          <input class="t-qty" id="tqty-${id}" type="number" min="0" step="1" placeholder="—"
+                 value="${phys !== null ? phys : ''}"
+                 onchange="onQtyChange(${id},this)" oninput="onQtyChange(${id},this)" />
+        </td>
+        <td class="r"><span class="t-var ${tcls}" id="tvar-${id}">${text}</span></td>
+        <td><span class="t-by" id="tby-${id}">${escH(c ? (c.counted_by || '') : '')}</span></td>
+        <td>
+          <input class="t-notes" type="text" placeholder="notes…"
+                 value="${escH(c ? (c.notes || '') : '')}"
+                 onchange="onNotesChange(${id},this)" />
+        </td>
+        <td><span class="t-time" id="tts-${id}">${c ? fmtTime(c.updated_at) : ''}</span></td>
+      </tr>`;
+    });
+    tbody.innerHTML = html || `<tr><td colspan="8" class="no-rows">No materials loaded.</td></tr>`;
+  }
+
+  /* ══════════════════════════════════════════════════════
+     TOTALS TAB
+  ══════════════════════════════════════════════════════ */
+  function renderTotals() {
     const total   = MATERIALS.length;
     const counted = Object.keys(counts).length;
     const remain  = total - counted;
+    const pct     = total ? Math.round((counted / total) * 100) : 0;
+
+    /* Counted-only aggregates */
+    let totalSAP = 0, totalPhys = 0;
+    const withVar = [], uncounted = [];
+
+    MATERIALS.forEach(({ material_id: id, description: desc, sap_qty: sap }) => {
+      const c = counts[id];
+      if (c && c.physical_qty !== null && c.physical_qty !== undefined) {
+        totalSAP  += Number(sap);
+        totalPhys += c.physical_qty;
+        if (c.physical_qty !== sap) {
+          withVar.push({ id, desc, sap: Number(sap), phys: c.physical_qty, diff: c.physical_qty - Number(sap) });
+        }
+      } else {
+        uncounted.push({ id, desc, sap: Number(sap) });
+      }
+    });
+
+    /* Sort variances by absolute value desc */
+    withVar.sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
+
+    const netVar   = totalPhys - totalSAP;
+    const netCls   = netVar === 0 ? '' : netVar > 0 ? ' ok' : ' bad';
+    const netTxt   = (netVar >= 0 ? '+' : '') + netVar.toLocaleString();
+
+    let html = `
+<div class="progress-card">
+  <div class="progress-card-title">Progress</div>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar-fill" style="width:${pct}%"></div>
+  </div>
+  <div class="progress-nums">
+    <div class="prog-num"><span class="prog-num-val green">${counted}</span><span class="prog-num-label">Counted</span></div>
+    <div class="prog-num"><span class="prog-num-val amber">${remain}</span><span class="prog-num-label">Remaining</span></div>
+    <div class="prog-num"><span class="prog-num-val muted">${pct}%</span><span class="prog-num-label">Complete</span></div>
+  </div>
+</div>
+
+<div class="summary-grid">
+  <div class="sum-card"><div class="sum-label">SAP Total</div><div class="sum-val">${totalSAP.toLocaleString()}</div></div>
+  <div class="sum-card"><div class="sum-label">Physical Total</div><div class="sum-val">${totalPhys.toLocaleString()}</div></div>
+  <div class="sum-card"><div class="sum-label">Net Variance</div><div class="sum-val${netCls}">${netTxt}</div></div>
+  <div class="sum-card"><div class="sum-label">Items w/ Variance</div><div class="sum-val${withVar.length ? ' bad' : ' ok'}">${withVar.length}</div></div>
+</div>`;
+
+    /* Variance list */
+    html += `<div>
+  <div class="section-heading">
+    Items with Variance
+    <span class="section-count${withVar.length ? ' bad' : ''}">${withVar.length}</span>
+  </div>`;
+    if (withVar.length) {
+      html += `<div class="result-list">`;
+      withVar.forEach(({ id, desc, sap, phys, diff }) => {
+        const cls  = diff > 0 ? 'pos' : 'neg';
+        const sign = diff > 0 ? '+' : '';
+        html += `<div class="result-item">
+  <div class="ri-desc">${escH(desc)}</div>
+  <div class="ri-var ${cls}">${sign}${diff.toLocaleString()}</div>
+  <div class="ri-qtys ri-id">${id} &nbsp;·&nbsp; SAP: ${sap.toLocaleString()} &nbsp;→&nbsp; Physical: ${phys.toLocaleString()}</div>
+</div>`;
+      });
+      html += `</div>`;
+    } else {
+      html += `<div class="result-list"><div class="empty-section">${counted ? 'No variances — all counts match SAP.' : 'No items counted yet.'}</div></div>`;
+    }
+    html += `</div>`;
+
+    /* Uncounted list */
+    html += `<div>
+  <div class="section-heading">
+    Uncounted Items
+    <span class="section-count">${uncounted.length}</span>
+  </div>`;
+    if (uncounted.length) {
+      html += `<div class="result-list">`;
+      uncounted.forEach(({ id, desc, sap }) => {
+        html += `<div class="result-item">
+  <div class="ri-desc">${escH(desc)}</div>
+  <div class="ri-sap">${sap.toLocaleString()}</div>
+  <div class="ri-id">${id}</div>
+</div>`;
+      });
+      html += `</div>`;
+    } else {
+      html += `<div class="result-list"><div class="empty-section">All items have been counted.</div></div>`;
+    }
+    html += `</div>`;
+
+    document.getElementById('totals-content').innerHTML = html;
+  }
+
+  /* ══════════════════════════════════════════════════════
+     STATS & FILTERS
+  ══════════════════════════════════════════════════════ */
+  function updateStats() {
+    const total   = MATERIALS.length;
+    const counted = Object.keys(counts).length;
     let varCount  = 0;
     MATERIALS.forEach(({ material_id: id, sap_qty: sap }) => {
       const c = counts[id];
       if (c && c.physical_qty !== sap) varCount++;
     });
-
-    document.getElementById('s-total').textContent     = total;
-    document.getElementById('s-counted').textContent   = counted;
-    document.getElementById('s-remaining').textContent = remain;
-    document.getElementById('s-variance').textContent  = varCount;
-    document.getElementById('prog-fill').style.width   =
-      total ? Math.round((counted / total) * 100) + '%' : '0%';
+    /* Stats are now only on the Totals tab — just update visible counts */
+    applyFilters();
   }
 
   function updateLastSync() {
-    document.getElementById('last-sync').textContent =
-      'Synced ' + new Date().toLocaleTimeString();
+    const t = 'Synced ' + new Date().toLocaleTimeString();
+    const ds = document.getElementById('last-sync');
+    const ms = document.getElementById('last-sync-mobile');
+    if (ds) ds.textContent = t;
+    if (ms) ms.textContent = t;
   }
 
-  /* ── Filters ──────────────────────────────────────────── */
   function setFilter(btn) {
     document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
@@ -1094,88 +1238,86 @@
   }
 
   function applyFilters() {
-    const q = document.getElementById('search-input').value.trim().toLowerCase();
+    const q = (document.getElementById('search-input') || {}).value || '';
+    const ql = q.trim().toLowerCase();
     let visible = 0;
 
     MATERIALS.forEach(({ material_id: id, description: desc, sap_qty: sap }) => {
-      const row = document.getElementById('row-' + id);
-      if (!row) return;
+      const c    = counts[id];
+      const phys = c ? c.physical_qty : null;
 
-      const c       = counts[id];
-      const physQty = c ? c.physical_qty : null;
+      let pass = true;
+      if (activeFilter === 'uncounted') pass = phys === null || phys === undefined;
+      else if (activeFilter === 'counted')  pass = phys !== null && phys !== undefined;
+      else if (activeFilter === 'variance') pass = phys !== null && phys !== undefined && phys !== sap;
 
-      let matchFilter = true;
-      if (activeFilter === 'uncounted') matchFilter = physQty === null || physQty === undefined;
-      else if (activeFilter === 'counted')  matchFilter = physQty !== null && physQty !== undefined;
-      else if (activeFilter === 'variance') matchFilter = physQty !== null && physQty !== sap;
+      if (pass && ql) pass = String(id).includes(ql) || desc.toLowerCase().includes(ql);
 
-      const matchSearch = !q || String(id).includes(q) || desc.toLowerCase().includes(q);
+      const show = pass ? '' : 'none';
 
-      const show = matchFilter && matchSearch;
-      row.style.display = show ? '' : 'none';
-      if (show) visible++;
+      const card = document.getElementById('card-' + id);
+      if (card) card.style.display = show;
+
+      const row  = document.getElementById('row-' + id);
+      if (row)  row.style.display  = show;
+
+      if (pass) visible++;
     });
 
-    document.getElementById('row-count-label').textContent =
-      `Showing ${visible} of ${MATERIALS.length} items`;
+    const lbl = `Showing ${visible} of ${MATERIALS.length}`;
+    const rm = document.getElementById('row-count-mobile');
+    const rd = document.getElementById('row-count-desktop');
+    if (rm) rm.textContent = lbl;
+    if (rd) rd.textContent = lbl;
   }
 
-  /* ── CSV Export ───────────────────────────────────────── */
+  /* ══════════════════════════════════════════════════════
+     EXPORT
+  ══════════════════════════════════════════════════════ */
   function exportCSV() {
     const rows = [['Material','Description','SAP Qty','Physical Qty','Variance','Counted By','Notes','Timestamp'].join(',')];
     MATERIALS.forEach(({ material_id: id, description: desc, sap_qty: sap }) => {
-      const c       = counts[id];
-      const physQty = (c && c.physical_qty !== null && c.physical_qty !== undefined) ? c.physical_qty : '';
-      const diff    = physQty !== '' ? physQty - sap : '';
-      const by      = c ? (c.counted_by || '') : '';
-      const notes   = c ? (c.notes || '') : '';
-      const ts      = c && c.updated_at ? new Date(c.updated_at).toLocaleString() : '';
-      rows.push([id, `"${String(desc).replace(/"/g,'""')}"`, sap, physQty, diff,
-                 `"${by}"`, `"${String(notes).replace(/"/g,'""')}"`, `"${ts}"`].join(','));
+      const c    = counts[id];
+      const phys = (c && c.physical_qty !== null) ? c.physical_qty : '';
+      const diff = phys !== '' ? phys - sap : '';
+      rows.push([id, `"${String(desc).replace(/"/g,'""')}"`, sap, phys, diff,
+                 `"${c ? (c.counted_by||'') : ''}"`,
+                 `"${c ? String(c.notes||'').replace(/"/g,'""') : ''}"`,
+                 `"${c && c.updated_at ? new Date(c.updated_at).toLocaleString() : ''}"`].join(','));
     });
-    const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-    const url  = URL.createObjectURL(blob);
-    const a    = Object.assign(document.createElement('a'), { href: url, download: `cerritos_count_${new Date().toISOString().slice(0,10)}.csv` });
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    const url = URL.createObjectURL(new Blob([rows.join('\n')], { type:'text/csv;charset=utf-8;' }));
+    const a = Object.assign(document.createElement('a'), {
+      href: url, download: `cerritos_count_${new Date().toISOString().slice(0,10)}.csv`
+    });
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
     showToast('CSV exported');
   }
 
-  /* ── Connection status ────────────────────────────────── */
+  /* ══════════════════════════════════════════════════════
+     UTILITIES
+  ══════════════════════════════════════════════════════ */
   function setConnStatus(state) {
-    const dot   = document.getElementById('conn-dot');
-    const label = document.getElementById('conn-label');
-    dot.className = 'dot';
-    const map = {
-      live:       { cls: 'live',  text: 'Live' },
-      saving:     { cls: 'saving',text: 'Saving…' },
-      error:      { cls: 'error', text: 'Error' },
-      connecting: { cls: '',      text: 'Connecting…' }
-    };
-    const s = map[state] || map.connecting;
-    if (s.cls) dot.classList.add(s.cls);
-    label.textContent = s.text;
+    const dot = document.getElementById('conn-dot');
+    const lbl = document.getElementById('conn-label');
+    dot.className = 'dot' + (state !== 'connecting' ? ' ' + state : '');
+    lbl.textContent = { live:'Live', saving:'Saving…', error:'Error', connecting:'…' }[state] || '…';
   }
 
-  /* ── Toast ────────────────────────────────────────────── */
   let toastTimer = null;
   function showToast(msg) {
     const el = document.getElementById('toast');
-    el.textContent = msg;
-    el.classList.add('show');
+    el.textContent = msg; el.classList.add('show');
     if (toastTimer) clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
   }
 
   /* ══════════════════════════════════════════════════════
      BOOT
   ══════════════════════════════════════════════════════ */
   initSupabase();
-  checkExistingMaterials();   // check Supabase for pre-existing material list
+  checkExistingMaterials();
 
-  /* Restore saved user name */
   try {
     const saved = localStorage.getItem('cerritos_user');
     if (saved) { nameInput.value = saved; }
