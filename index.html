@@ -542,6 +542,80 @@
     }
 
     /* ══════════════════════════════════════════════════════
+       CLEAR MODAL
+    ══════════════════════════════════════════════════════ */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 9000;
+      background: rgba(0,0,0,0.5);
+      display: flex; align-items: center; justify-content: center;
+      padding: 1.5rem;
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+    }
+
+    .modal-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      padding: 1.75rem;
+      width: 100%; max-width: 360px;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.2);
+    }
+
+    .modal-icon {
+      width: 44px; height: 44px;
+      background: var(--bad-bg);
+      border-radius: var(--r-md);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 1rem;
+    }
+
+    .modal-title { font-size: 17px; font-weight: 700; margin-bottom: .5rem; }
+    .modal-body  { font-size: 13px; color: var(--text-2); line-height: 1.6; margin-bottom: 1.5rem; }
+
+    .modal-warning {
+      background: var(--bad-bg);
+      border: 1px solid rgba(163,45,45,.2);
+      border-radius: var(--r-sm);
+      padding: .65rem .85rem;
+      font-size: 12px; font-weight: 600;
+      color: var(--bad);
+      margin-bottom: 1.25rem;
+      line-height: 1.5;
+    }
+
+    .modal-actions { display: flex; gap: .65rem; }
+
+    .modal-btn-cancel {
+      flex: 1; height: 44px;
+      background: var(--surface-2);
+      border: 1px solid var(--border-med);
+      border-radius: var(--r-sm);
+      font-size: 14px; font-weight: 600;
+      color: var(--text-2); font-family: inherit;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: background .15s;
+    }
+    .modal-btn-cancel:hover { background: var(--border); }
+
+    .modal-btn-confirm {
+      flex: 1; height: 44px;
+      background: var(--bad);
+      border: none;
+      border-radius: var(--r-sm);
+      font-size: 14px; font-weight: 700;
+      color: #fff; font-family: inherit;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: background .15s;
+    }
+    .modal-btn-confirm:hover   { background: #8a2525; }
+    .modal-btn-confirm:disabled { background: var(--text-3); cursor: not-allowed; }
+
+    .danger-link { color: var(--bad) !important; }
+
+    /* ══════════════════════════════════════════════════════
        TOAST
     ══════════════════════════════════════════════════════ */
     #toast {
@@ -576,7 +650,7 @@
     <div class="setup-sub">17AG · Cerritos Warehouse, CA<br>All entries sync live with your team.</div>
 
     <label class="field-label" for="setup-name">Your name or initials</label>
-    <input id="setup-name" type="text" placeholder="e.g. Albert G." autocomplete="off"
+    <input id="setup-name" type="text" placeholder="e.g. Luis A." autocomplete="off"
            autocorrect="off" autocapitalize="words" />
 
     <div class="divider"></div>
@@ -623,6 +697,7 @@
       <span class="dot" id="conn-dot"></span>
       <span class="conn-text" id="conn-label">…</span>
       <button class="top-link" onclick="goBack()">← Exit</button>
+      <button class="top-link danger-link" onclick="showClearModal()">Clear Day</button>
     </div>
   </div>
 
@@ -693,6 +768,32 @@
 
 </div><!-- /app -->
 
+<div id="clear-modal" class="modal-overlay" style="display:none;" onclick="onModalOverlayClick(event)">
+  <div class="modal-card">
+    <div class="modal-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+           stroke="#A32D2D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="3 6 5 6 21 6"/>
+        <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+        <path d="M10 11v6M14 11v6"/>
+        <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+      </svg>
+    </div>
+    <div class="modal-title">Clear all data?</div>
+    <div class="modal-body">
+      This removes all materials and count entries from Supabase for every user on the team.
+      Use this at the end of the day before starting a new count session.
+    </div>
+    <div class="modal-warning">
+      ⚠ This cannot be undone. Export a CSV first if you need a record of today's count.
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn-cancel"  onclick="hideClearModal()">Cancel</button>
+      <button class="modal-btn-confirm" id="confirm-clear-btn" onclick="clearAllData()">Clear everything</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <!-- ══════════════════════════════════════════════════════
@@ -700,8 +801,8 @@
 ══════════════════════════════════════════════════════ -->
 <script>
   /* ── Config ─────────────────────────────────────────── */
-  const SUPABASE_URL      = 'https://easfrwilbxypcdooawtt.supabase.co';
-  const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+  const SUPABASE_URL      = 'https://iyqeihxcuenaooqdgluf.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml5cWVpaHhjdWVuYW9vcWRnbHVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMTY1MTcsImV4cCI6MjA5MzU5MjUxN30.dc3-3ONuuWMp8ZjsByc_Tcb5Vg2xk5abHK9yw-l8mxw';
   const MAT_TABLE         = 'cerritos_materials';
   const CNT_TABLE         = 'cerritos_counts';
 
@@ -1310,6 +1411,63 @@
     el.textContent = msg; el.classList.add('show');
     if (toastTimer) clearTimeout(toastTimer);
     toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+  }
+
+  /* ══════════════════════════════════════════════════════
+     CLEAR ALL DATA
+  ══════════════════════════════════════════════════════ */
+  function showClearModal() {
+    const btn = document.getElementById('confirm-clear-btn');
+    btn.disabled = false;
+    btn.textContent = 'Clear everything';
+    document.getElementById('clear-modal').style.display = 'flex';
+  }
+
+  function hideClearModal() {
+    document.getElementById('clear-modal').style.display = 'none';
+  }
+
+  function onModalOverlayClick(e) {
+    if (e.target === document.getElementById('clear-modal')) hideClearModal();
+  }
+
+  async function clearAllData() {
+    const btn = document.getElementById('confirm-clear-btn');
+    btn.disabled = true;
+    btn.textContent = 'Clearing…';
+
+    try {
+      /* Delete counts first — FK references materials */
+      const { error: e1 } = await db
+        .from(CNT_TABLE)
+        .delete()
+        .not('material_id', 'is', null);
+      if (e1) throw e1;
+
+      /* Delete materials */
+      const { error: e2 } = await db
+        .from(MAT_TABLE)
+        .delete()
+        .not('material_id', 'is', null);
+      if (e2) throw e2;
+
+      /* Reset local state */
+      counts     = {};
+      MATERIALS  = [];
+      parsedRows = null;
+
+      hideClearModal();
+      showToast('All data cleared — ready for a new count session');
+
+      /* Return to setup screen after a brief pause */
+      setTimeout(goBack, 1200);
+
+    } catch (err) {
+      console.error('Clear error:', err);
+      btn.disabled    = false;
+      btn.textContent = 'Clear everything';
+      showToast('Clear failed — check console');
+    }
   }
 
   /* ══════════════════════════════════════════════════════
