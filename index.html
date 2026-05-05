@@ -613,6 +613,35 @@
     .modal-btn-confirm:hover   { background: #8a2525; }
     .modal-btn-confirm:disabled { background: var(--text-3); cursor: not-allowed; }
 
+    .modal-btn-amber {
+      background: var(--amber) !important;
+    }
+    .modal-btn-amber:hover:not(:disabled) { background: var(--amber-dk) !important; }
+
+    /* Confirm-entry modal internals */
+    .cm-mat-row {
+      display: flex; align-items: baseline; gap: 8px;
+      margin-bottom: .35rem;
+    }
+    .cm-mat-id   { font-family: var(--mono); font-size: 12px; color: var(--text-3); }
+    .cm-mat-desc { font-size: 15px; font-weight: 700; line-height: 1.35; flex: 1; }
+
+    .cm-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: .5rem .75rem;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: .85rem 1rem;
+      margin: 1rem 0;
+    }
+    .cm-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); align-self: center; }
+    .cm-val   { font-family: var(--mono); font-size: 16px; font-weight: 700; text-align: right; }
+    .cm-val.highlight { color: var(--amber); font-size: 20px; }
+    .cm-val.ok  { color: var(--ok); }
+    .cm-val.bad { color: var(--bad); }
+    .cm-val.muted { color: var(--text-2); font-weight: 400; font-style: italic; }
+
     .danger-link { color: var(--bad) !important; }
 
     /* ══════════════════════════════════════════════════════
@@ -650,7 +679,7 @@
     <div class="setup-sub">17AG · Cerritos Warehouse, CA<br>All entries sync live with your team.</div>
 
     <label class="field-label" for="setup-name">Your name or initials</label>
-    <input id="setup-name" type="text" placeholder="e.g. Luis A." autocomplete="off"
+    <input id="setup-name" type="text" placeholder="e.g. Albert G." autocomplete="off"
            autocorrect="off" autocapitalize="words" />
 
     <div class="divider"></div>
@@ -768,7 +797,33 @@
 
 </div><!-- /app -->
 
-<div id="clear-modal" class="modal-overlay" style="display:none;" onclick="onModalOverlayClick(event)">
+<!-- Confirm entry modal -->
+<div id="confirm-modal" class="modal-overlay" style="display:none;" onclick="onConfirmOverlayClick(event)">
+  <div class="modal-card">
+    <div class="cm-mat-row">
+      <span class="cm-mat-id" id="cm-mat-id"></span>
+      <span class="cm-mat-desc" id="cm-mat-desc"></span>
+    </div>
+
+    <div class="cm-grid">
+      <span class="cm-label">SAP Qty</span>
+      <span class="cm-val muted" id="cm-sap"></span>
+
+      <span class="cm-label">Your Count</span>
+      <span class="cm-val highlight" id="cm-count"></span>
+
+      <span class="cm-label">Variance</span>
+      <span class="cm-val" id="cm-var"></span>
+    </div>
+
+    <div class="modal-actions">
+      <button class="modal-btn-cancel"                          onclick="cancelEntry()">Cancel</button>
+      <button class="modal-btn-confirm modal-btn-amber" id="confirm-entry-btn" onclick="confirmEntry()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Clear day modal --> style="display:none;" onclick="onModalOverlayClick(event)">
   <div class="modal-card">
     <div class="modal-icon">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
@@ -1043,27 +1098,142 @@
   /* ══════════════════════════════════════════════════════
      INPUT HANDLERS
   ══════════════════════════════════════════════════════ */
-  function onQtyChange(materialId, inputEl) {
-    const val = inputEl.value.trim();
+  /* ══════════════════════════════════════════════════════
+     CONFIRM-ENTRY FLOW
+     Qty inputs fire onQtyBlur / onQtyKeydown.
+     The actual state + Supabase write only happens after
+     the user confirms in the modal.
+  ══════════════════════════════════════════════════════ */
+  let pendingEntry = null; // { materialId, newQty, prevQty }
+
+  function onQtyKeydown(e, materialId, inputEl) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      inputEl.blur();           // triggers onQtyBlur
+    }
+    if (e.key === 'Escape') {
+      revertInput(materialId);  // discard what was typed
+      inputEl.blur();
+    }
+  }
+
+  function onQtyBlur(materialId, inputEl) {
+    /* Don't re-trigger while confirm modal is already open */
+    if (document.getElementById('confirm-modal').style.display !== 'none') return;
+
+    const val    = inputEl.value.trim();
+    const prevQty = counts[materialId] != null ? counts[materialId].physical_qty : null;
+    const prevStr = prevQty !== null && prevQty !== undefined ? String(prevQty) : '';
+
+    /* Nothing changed — ignore */
+    if (val === prevStr || (val === '' && prevQty === null)) return;
+
+    /* Validate */
+    if (val !== '') {
+      const n = parseInt(val, 10);
+      if (isNaN(n) || n < 0) {
+        inputEl.style.borderColor = 'var(--bad)';
+        return;
+      }
+    }
     inputEl.style.borderColor = '';
-    if (val === '') {
+
+    const newQty = val === '' ? null : parseInt(val, 10);
+    pendingEntry = { materialId, newQty, prevQty };
+    showConfirmModal(materialId, newQty);
+  }
+
+  function showConfirmModal(materialId, newQty) {
+    const mat = MATERIALS.find(m => m.material_id === materialId);
+    if (!mat) return;
+
+    const sap  = Number(mat.sap_qty);
+    const diff = newQty !== null ? newQty - sap : null;
+
+    document.getElementById('cm-mat-id').textContent   = materialId;
+    document.getElementById('cm-mat-desc').textContent = mat.description;
+    document.getElementById('cm-sap').textContent      = sap.toLocaleString();
+
+    const countEl = document.getElementById('cm-count');
+    if (newQty !== null) {
+      countEl.textContent = newQty.toLocaleString();
+      countEl.className   = 'cm-val highlight';
+    } else {
+      countEl.textContent = 'Clear entry';
+      countEl.className   = 'cm-val muted';
+    }
+
+    const varEl = document.getElementById('cm-var');
+    if (diff === null) {
+      varEl.textContent = '—';
+      varEl.className   = 'cm-val muted';
+    } else {
+      varEl.textContent = (diff >= 0 ? '+' : '') + diff.toLocaleString();
+      varEl.className   = 'cm-val ' + (diff === 0 ? 'ok' : 'bad');
+    }
+
+    const btn = document.getElementById('confirm-entry-btn');
+    btn.disabled    = false;
+    btn.textContent = newQty !== null ? 'Confirm' : 'Confirm Clear';
+
+    document.getElementById('confirm-modal').style.display = 'flex';
+  }
+
+  function confirmEntry() {
+    if (!pendingEntry) return;
+    const { materialId, newQty } = pendingEntry;
+    const btn = document.getElementById('confirm-entry-btn');
+    btn.disabled = true;
+
+    if (newQty === null) {
       delete counts[materialId];
     } else {
-      const qty = parseInt(val, 10);
-      if (isNaN(qty) || qty < 0) { inputEl.style.borderColor = 'var(--bad)'; return; }
       counts[materialId] = {
-        material_id: materialId, physical_qty: qty,
-        counted_by: currentUser, notes: (counts[materialId] || {}).notes || '',
-        updated_at: new Date().toISOString()
+        material_id:  materialId,
+        physical_qty: newQty,
+        counted_by:   currentUser,
+        notes:        (counts[materialId] || {}).notes || '',
+        updated_at:   new Date().toISOString()
       };
     }
+
     updateRowDOM(materialId);
     if (activeTab === 'totals') renderTotals();
     scheduleSave(materialId);
+
+    pendingEntry = null;
+    document.getElementById('confirm-modal').style.display = 'none';
   }
 
+  function cancelEntry() {
+    if (pendingEntry) {
+      revertInput(pendingEntry.materialId);
+      pendingEntry = null;
+    }
+    document.getElementById('confirm-modal').style.display = 'none';
+  }
+
+  function revertInput(materialId) {
+    const prevQty  = counts[materialId] != null ? counts[materialId].physical_qty : null;
+    const prevStr  = prevQty !== null && prevQty !== undefined ? String(prevQty) : '';
+    const cardInp  = document.querySelector(`#card-${materialId} .qty-input-card`);
+    const tableInp = document.getElementById('tqty-' + materialId);
+    if (cardInp)  { cardInp.value  = prevStr; cardInp.style.borderColor  = ''; }
+    if (tableInp) { tableInp.value = prevStr; tableInp.style.borderColor = ''; }
+  }
+
+  function onConfirmOverlayClick(e) {
+    if (e.target === document.getElementById('confirm-modal')) cancelEntry();
+  }
+
+  /* onQtyChange kept for notes compatibility */
+  function onQtyChange() {}
+
   function onNotesChange(materialId, inputEl) {
-    if (counts[materialId]) { counts[materialId].notes = inputEl.value.trim(); scheduleSave(materialId); }
+    if (counts[materialId]) {
+      counts[materialId].notes = inputEl.value.trim();
+      scheduleSave(materialId);
+    }
   }
 
   /* ══════════════════════════════════════════════════════
@@ -1162,7 +1332,8 @@
     <input class="qty-input-card" type="number" inputmode="numeric" min="0" step="1"
            placeholder="—"
            value="${phys !== null ? phys : ''}"
-           onchange="onQtyChange(${id},this)" oninput="onQtyChange(${id},this)" />
+           onkeydown="onQtyKeydown(event,${id},this)"
+           onblur="onQtyBlur(${id},this)" />
     <span class="body-label">Variance</span>
     <span class="var-badge ${cls}">${text}</span>
   </div>
@@ -1193,7 +1364,8 @@
         <td class="r">
           <input class="t-qty" id="tqty-${id}" type="number" min="0" step="1" placeholder="—"
                  value="${phys !== null ? phys : ''}"
-                 onchange="onQtyChange(${id},this)" oninput="onQtyChange(${id},this)" />
+                 onkeydown="onQtyKeydown(event,${id},this)"
+                 onblur="onQtyBlur(${id},this)" />
         </td>
         <td class="r"><span class="t-var ${tcls}" id="tvar-${id}">${text}</span></td>
         <td><span class="t-by" id="tby-${id}">${escH(c ? (c.counted_by || '') : '')}</span></td>
