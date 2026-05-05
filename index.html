@@ -642,6 +642,23 @@
     .cm-val.bad { color: var(--bad); }
     .cm-val.muted { color: var(--text-2); font-weight: 400; font-style: italic; }
 
+    /* Running total display (card + table) */
+    .rt-val {
+      font-family: var(--mono); font-size: 15px; font-weight: 700;
+      text-align: right;
+    }
+    .rt-val.rt-ok   { color: var(--ok); }
+    .rt-val.rt-bad  { color: var(--bad); }
+    .rt-val.rt-none { color: var(--text-3); font-weight: 400; }
+
+    /* Divider row inside cm-grid */
+    .cm-divider {
+      grid-column: 1 / -1;
+      height: 1px;
+      background: var(--border-med);
+      margin: .1rem 0;
+    }
+
     .danger-link { color: var(--bad) !important; }
 
     /* ══════════════════════════════════════════════════════
@@ -764,7 +781,8 @@
               <th style="width:90px">Material</th>
               <th>Description</th>
               <th class="r" style="width:80px">SAP Qty</th>
-              <th class="r" style="width:96px">Physical Qty</th>
+              <th class="r" style="width:80px">Counted</th>
+              <th class="r" style="width:96px">Add Count</th>
               <th class="r" style="width:80px">Variance</th>
               <th style="width:95px">Counted By</th>
               <th style="width:120px">Notes</th>
@@ -809,8 +827,18 @@
       <span class="cm-label">SAP Qty</span>
       <span class="cm-val muted" id="cm-sap"></span>
 
-      <span class="cm-label">Your Count</span>
+      <div class="cm-divider"></div>
+
+      <span class="cm-label">Previously counted</span>
+      <span class="cm-val muted" id="cm-prev"></span>
+
+      <span class="cm-label">+ This count</span>
       <span class="cm-val highlight" id="cm-count"></span>
+
+      <div class="cm-divider"></div>
+
+      <span class="cm-label">= New total</span>
+      <span class="cm-val" id="cm-total"></span>
 
       <span class="cm-label">Variance</span>
       <span class="cm-val" id="cm-var"></span>
@@ -1147,13 +1175,22 @@
     const mat = MATERIALS.find(m => m.material_id === materialId);
     if (!mat) return;
 
-    const sap  = Number(mat.sap_qty);
-    const diff = newQty !== null ? newQty - sap : null;
+    const sap     = Number(mat.sap_qty);
+    const prevQty = pendingEntry ? pendingEntry.prevQty : null;
+    const prev    = prevQty !== null && prevQty !== undefined ? prevQty : 0;
+    const newTotal = newQty !== null ? prev + newQty : null;
+    const diff     = newTotal !== null ? newTotal - sap : null;
 
     document.getElementById('cm-mat-id').textContent   = materialId;
     document.getElementById('cm-mat-desc').textContent = mat.description;
     document.getElementById('cm-sap').textContent      = sap.toLocaleString();
 
+    /* Previously counted */
+    const prevEl = document.getElementById('cm-prev');
+    prevEl.textContent = prev > 0 ? prev.toLocaleString() : 'None';
+    prevEl.className   = prev > 0 ? 'cm-val muted' : 'cm-val muted';
+
+    /* This count */
     const countEl = document.getElementById('cm-count');
     if (newQty !== null) {
       countEl.textContent = newQty.toLocaleString();
@@ -1163,6 +1200,17 @@
       countEl.className   = 'cm-val muted';
     }
 
+    /* New total */
+    const totalEl = document.getElementById('cm-total');
+    if (newTotal !== null) {
+      totalEl.textContent = newTotal.toLocaleString();
+      totalEl.className   = 'cm-val ' + (diff === 0 ? 'ok' : 'bad');
+    } else {
+      totalEl.textContent = '—';
+      totalEl.className   = 'cm-val muted';
+    }
+
+    /* Variance */
     const varEl = document.getElementById('cm-var');
     if (diff === null) {
       varEl.textContent = '—';
@@ -1181,21 +1229,31 @@
 
   function confirmEntry() {
     if (!pendingEntry) return;
-    const { materialId, newQty } = pendingEntry;
+    const { materialId, newQty, prevQty } = pendingEntry;
     const btn = document.getElementById('confirm-entry-btn');
     btn.disabled = true;
 
     if (newQty === null) {
+      /* Explicit clear */
       delete counts[materialId];
     } else {
+      /* Accumulate: add this batch to whatever was already confirmed */
+      const prev     = prevQty !== null && prevQty !== undefined ? prevQty : 0;
+      const newTotal = prev + newQty;
       counts[materialId] = {
         material_id:  materialId,
-        physical_qty: newQty,
+        physical_qty: newTotal,
         counted_by:   currentUser,
         notes:        (counts[materialId] || {}).notes || '',
         updated_at:   new Date().toISOString()
       };
     }
+
+    /* Reset inputs to empty — they represent "batch to add", not the total */
+    const cardInp  = document.querySelector(`#card-${materialId} .qty-input-card`);
+    const tableInp = document.getElementById('tqty-' + materialId);
+    if (cardInp)  cardInp.value  = '';
+    if (tableInp) tableInp.value = '';
 
     updateRowDOM(materialId);
     if (activeTab === 'totals') renderTotals();
@@ -1214,12 +1272,11 @@
   }
 
   function revertInput(materialId) {
-    const prevQty  = counts[materialId] != null ? counts[materialId].physical_qty : null;
-    const prevStr  = prevQty !== null && prevQty !== undefined ? String(prevQty) : '';
+    /* Input always represents "batch to add" — revert to empty, not to previous total */
     const cardInp  = document.querySelector(`#card-${materialId} .qty-input-card`);
     const tableInp = document.getElementById('tqty-' + materialId);
-    if (cardInp)  { cardInp.value  = prevStr; cardInp.style.borderColor  = ''; }
-    if (tableInp) { tableInp.value = prevStr; tableInp.style.borderColor = ''; }
+    if (cardInp)  { cardInp.value  = ''; cardInp.style.borderColor  = ''; }
+    if (tableInp) { tableInp.value = ''; tableInp.style.borderColor = ''; }
   }
 
   function onConfirmOverlayClick(e) {
@@ -1275,8 +1332,12 @@
       card.className = 'mat-card' + (phys !== null ? (phys === mat.sap_qty ? ' counted-card' : ' variance-card') : '');
       const vb = card.querySelector('.var-badge');
       if (vb) { vb.textContent = text; vb.className = `var-badge ${cls}`; }
-      const qi = card.querySelector('.qty-input-card');
-      if (qi && document.activeElement !== qi) qi.value = phys !== null ? phys : '';
+      /* Update running total display — never touch the batch-entry input */
+      const rtEl = document.getElementById('rt-' + materialId);
+      if (rtEl) {
+        rtEl.textContent = phys !== null ? Number(phys).toLocaleString() : '—';
+        rtEl.className   = 'rt-val ' + (phys !== null ? (phys === mat.sap_qty ? 'rt-ok' : 'rt-bad') : 'rt-none');
+      }
       const bt = card.querySelector('.by-time');
       if (bt) bt.textContent = by ? `${by} · ${ts}` : '';
     }
@@ -1285,14 +1346,18 @@
     const row = document.getElementById('row-' + materialId);
     if (row) {
       row.className = phys !== null ? (phys === mat.sap_qty ? 'tr-match' : 'tr-variance') : '';
-      const tv = document.getElementById('tvar-' + materialId);
+      const tcnt = document.getElementById('tcnt-' + materialId);
+      if (tcnt) {
+        tcnt.textContent = phys !== null ? Number(phys).toLocaleString() : '—';
+        tcnt.className   = 't-var t-counted ' + (phys !== null ? (phys === mat.sap_qty ? 'tv-zero' : 'tv-neg') : 'tv-none');
+      }
+      const tv = document.getElementById('tvar-'  + materialId);
       if (tv) { tv.textContent = text; tv.className = `t-var ${tcls}`; }
-      const tby = document.getElementById('tby-' + materialId);
+      const tby = document.getElementById('tby-'  + materialId);
       if (tby) tby.textContent = by;
-      const tts = document.getElementById('tts-' + materialId);
+      const tts = document.getElementById('tts-'  + materialId);
       if (tts) tts.textContent = ts;
-      const tqi = document.getElementById('tqty-' + materialId);
-      if (tqi && document.activeElement !== tqi) tqi.value = phys !== null ? phys : '';
+      /* Never overwrite the batch-entry input */
     }
 
     updateStats();
@@ -1328,10 +1393,12 @@
   <div class="mat-card-body">
     <span class="body-label">SAP Qty</span>
     <span class="sap-val">${Number(sap).toLocaleString()}</span>
-    <span class="body-label">Physical</span>
+    <span class="body-label">Total Counted</span>
+    <span class="rt-val ${phys !== null ? (phys === sap ? 'rt-ok' : 'rt-bad') : 'rt-none'}" id="rt-${id}">${phys !== null ? Number(phys).toLocaleString() : '—'}</span>
+    <span class="body-label">Add Count</span>
     <input class="qty-input-card" type="number" inputmode="numeric" min="0" step="1"
-           placeholder="—"
-           value="${phys !== null ? phys : ''}"
+           placeholder="0"
+           value=""
            onkeydown="onQtyKeydown(event,${id},this)"
            onblur="onQtyBlur(${id},this)" />
     <span class="body-label">Variance</span>
@@ -1361,9 +1428,10 @@
         <td><span class="t-mat">${id}</span></td>
         <td><span class="t-desc">${escH(desc)}</span></td>
         <td class="r"><span class="t-sap">${Number(sap).toLocaleString()}</span></td>
+        <td class="r"><span class="t-var ${phys !== null ? (phys === sap ? 'tv-zero' : 'tv-neg') : 'tv-none'} t-counted" id="tcnt-${id}">${phys !== null ? Number(phys).toLocaleString() : '—'}</span></td>
         <td class="r">
-          <input class="t-qty" id="tqty-${id}" type="number" min="0" step="1" placeholder="—"
-                 value="${phys !== null ? phys : ''}"
+          <input class="t-qty" id="tqty-${id}" type="number" min="0" step="1" placeholder="0"
+                 value=""
                  onkeydown="onQtyKeydown(event,${id},this)"
                  onblur="onQtyBlur(${id},this)" />
         </td>
