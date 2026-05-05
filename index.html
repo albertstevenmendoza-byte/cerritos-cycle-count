@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cerritos Physical Count — 17AG</title>
+
+  <!-- Supabase JS v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+  <style>
+    /* ── Reset & Base ─────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --amber:        #B87C20;
+      --amber-dark:   #9A6816;
+      --amber-light:  #F5E4C3;
+      --bg:           #F4F3F0;
+      --surface:      #FFFFFF;
+      --surface-2:    #F0EFEB;
+      --border:       rgba(0,0,0,0.10);
+      --border-med:   rgba(0,0,0,0.18);
+      --text:         #1A1A18;
+      --text-2:       #6B6B67;
+      --text-3:       #A0A09C;
+      --success:      #2A7A3B;
+      --success-bg:   #EAF3DE;
+      --danger:       #A32D2D;
+      --danger-bg:    #FCEBEB;
+      --info:         #185FA5;
+      --mono:         'Courier New', Courier, monospace;
+      --radius-sm:    6px;
+      --radius-md:    8px;
+      --radius-lg:    12px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:         #1C1C1A;
+        --surface:    #242422;
+        --surface-2:  #2E2E2C;
+        --border:     rgba(255,255,255,0.10);
+        --border-med: rgba(255,255,255,0.18);
+        --text:       #E8E8E4;
+        --text-2:     #9A9A96;
+        --text-3:     #6B6B67;
+        --amber-light:#3A2E14;
+        --success-bg: #172814;
+        --danger-bg:  #2A1010;
+      }
+    }
+
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      font-size: 14px;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    /* ── Setup Screen ─────────────────────────────────────── */
+    #setup-screen {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    .setup-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 2.25rem;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    }
+
+    .setup-icon {
+      width: 44px;
+      height: 44px;
+      background: var(--amber-light);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1.25rem;
+    }
+
+    .setup-title { font-size: 20px; font-weight: 600; margin-bottom: 0.4rem; }
+    .setup-sub   { font-size: 13px; color: var(--text-2); margin-bottom: 1.75rem; line-height: 1.6; }
+
+    label.field-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-2);
+      margin-bottom: 5px;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      height: 38px;
+      padding: 0 10px;
+      background: var(--surface);
+      border: 1px solid var(--border-med);
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      color: var(--text);
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input[type="text"]:focus,
+    input[type="number"]:focus {
+      border-color: var(--amber);
+      box-shadow: 0 0 0 3px rgba(184,124,32,0.15);
+    }
+
+    input[type="number"] { text-align: right; font-family: var(--mono); }
+
+    #setup-name { margin-bottom: 1.25rem; }
+
+    .btn-primary {
+      width: 100%;
+      height: 40px;
+      background: var(--amber);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-primary:hover   { background: var(--amber-dark); }
+    .btn-primary:disabled { background: var(--surface-2); color: var(--text-3); cursor: not-allowed; }
+
+    /* ── App Shell ────────────────────────────────────────── */
+    #app { display: none; }
+
+    .top-bar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0.65rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .top-bar-title { font-size: 15px; font-weight: 600; flex: 1; }
+    .top-bar-meta  { font-size: 12px; color: var(--text-2); display: flex; align-items: center; gap: 10px; }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--text-3);
+      display: inline-block;
+      transition: background 0.3s;
+    }
+    .dot.live    { background: var(--success); }
+    .dot.error   { background: var(--danger); }
+    .dot.saving  { background: var(--amber); }
+
+    .change-link {
+      background: none;
+      border: none;
+      color: var(--info);
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      padding: 0;
+      text-decoration: underline;
+    }
+
+    /* ── Stats Row ────────────────────────────────────────── */
+    .content { padding: 1rem 1.25rem; }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 0.85rem;
+    }
+
+    .stat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 0.75rem 1rem;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-3);
+      margin-bottom: 4px;
+    }
+
+    .stat-value { font-size: 22px; font-weight: 600; }
+    .stat-value.amber   { color: var(--amber); }
+    .stat-value.green   { color: var(--success); }
+    .stat-value.red     { color: var(--danger); }
+
+    /* ── Progress Bar ─────────────────────────────────────── */
+    .progress-wrap {
+      height: 4px;
+      background: var(--surface-2);
+      border-radius: 2px;
+      margin-bottom: 0.85rem;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--amber);
+      border-radius: 2px;
+      transition: width 0.5s ease;
+    }
+
+    /* ── Toolbar ──────────────────────────────────────────── */
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 0.85rem;
+      flex-wrap: wrap;
+    }
+
+    #search-input {
+      flex: 1;
+      min-width: 160px;
+      height: 34px;
+      padding: 0 10px;
+    }
+
+    .filter-group { display: flex; gap: 4px; }
+
+    .fbtn {
+      height: 34px;
+      padding: 0 11px;
+      background: var(--surface);
+      border: 1px solid var(--border-med);
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-2);
+      font-family: inherit;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+    }
+    .fbtn:hover      { background: var(--surface-2); }
+    .fbtn.active     { background: var(--amber); border-color: var(--amber); color: #fff; }
+
+    .export-btn {
+      height: 34px;
+      padding: 0 12px;
+      background: var(--surface);
+      border: 1px solid var(--border-med);
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-2);
+      font-family: inherit;
+      cursor: pointer;
+      margin-left: auto;
+      white-space: nowrap;
+      transition: background 0.12s;
+    }
+    .export-btn:hover { background: var(--surface-2); }
+
+    /* ── Table ────────────────────────────────────────────── */
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    thead tr { background: var(--surface-2); }
+
+    th {
+      padding: 9px 10px;
+      text-align: left;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-3);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    th.r, td.r { text-align: right; }
+
+    td {
+      padding: 6px 10px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    tr.row-match   td { background: color-mix(in srgb, var(--success-bg) 40%, transparent); }
+    tr.row-variance td { background: color-mix(in srgb, var(--danger-bg) 40%, transparent); }
+
+    tr:hover td { filter: brightness(0.97); }
+    @media (prefers-color-scheme: dark) { tr:hover td { filter: brightness(1.05); } }
+
+    .mat-id {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-2);
+      letter-spacing: 0.02em;
+    }
+
+    .desc {
+      font-size: 12px;
+      line-height: 1.4;
+      max-width: 210px;
+      word-break: break-word;
+    }
+
+    .sap-qty {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text-2);
+    }
+
+    .qty-input {
+      width: 90px;
+      height: 30px;
+      padding: 0 8px;
+      font-family: var(--mono);
+      font-size: 12px;
+      border-radius: var(--radius-sm);
+    }
+
+    .notes-input {
+      height: 30px;
+      width: 115px;
+      padding: 0 8px;
+      font-size: 11px;
+      border-radius: var(--radius-sm);
+    }
+
+    .var-cell {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .var-none     { color: var(--text-3); font-weight: 400; }
+    .var-zero     { color: var(--success); }
+    .var-positive { color: var(--success); }
+    .var-negative { color: var(--danger); }
+
+    .by-cell {
+      font-size: 11px;
+      color: var(--text-2);
+      white-space: nowrap;
+      max-width: 90px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .time-cell {
+      font-size: 10px;
+      color: var(--text-3);
+      white-space: nowrap;
+    }
+
+    /* ── Table Footer ─────────────────────────────────────── */
+    .table-footer {
+      padding: 8px 12px;
+      font-size: 11px;
+      color: var(--text-3);
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--surface-2);
+    }
+
+    /* ── No Results ───────────────────────────────────────── */
+    .no-results {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--text-2);
+      font-size: 14px;
+    }
+
+    /* ── Toast ────────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      background: var(--text);
+      color: var(--bg);
+      padding: 10px 16px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+      z-index: 9999;
+    }
+    #toast.show { opacity: 1; }
+
+    /* ── Responsive ───────────────────────────────────────── */
+    @media (max-width: 680px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .filter-group { flex-wrap: wrap; }
+      .desc { max-width: 120px; }
+      .notes-input { width: 80px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Setup Screen ──────────────────────────────────────── -->
+<div id="setup-screen">
+  <div class="setup-card">
+    <div class="setup-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+           stroke="#B87C20" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
+        <rect x="9" y="3" width="6" height="4" rx="1"/>
+        <line x1="9" y1="12" x2="15" y2="12"/>
+        <line x1="9" y1="16" x2="13" y2="16"/>
+      </svg>
+    </div>
+
+    <div class="setup-title">Cerritos Physical Count</div>
+    <div class="setup-sub">
+      17AG · Cerritos Warehouse, CA<br>
+      Enter your name to start. All entries are shared live with your team.
+    </div>
+
+    <label class="field-label" for="setup-name">Your name or initials</label>
+    <input id="setup-name" type="text" placeholder="e.g. Albert G." autocomplete="off" />
+
+    <button class="btn-primary" id="start-btn" disabled onclick="startCounting()">
+      Start Counting
+    </button>
+  </div>
+</div>
+
+<!-- ── App ──────────────────────────────────────────────── -->
+<div id="app">
+
+  <div class="top-bar">
+    <div class="top-bar-title">17AG Cerritos — Physical Count</div>
+    <div class="top-bar-meta">
+      <span class="dot" id="conn-dot" title="Connection status"></span>
+      <span id="conn-label">Connecting…</span>
+      <span>·</span>
+      <span id="user-label"></span>
+      <button class="change-link" onclick="changeUser()">change</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <div class="stats-row">
+      <div class="stat">
+        <div class="stat-label">Total Items</div>
+        <div class="stat-value" id="s-total">200</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Counted</div>
+        <div class="stat-value green" id="s-counted">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Remaining</div>
+        <div class="stat-value amber" id="s-remaining">200</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Variance</div>
+        <div class="stat-value red" id="s-variance">0</div>
+      </div>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-fill" id="prog-fill" style="width:0%"></div>
+    </div>
+
+    <div class="toolbar">
+      <input id="search-input" type="text"
+             placeholder="Search material # or description…"
+             oninput="applyFilters()" />
+
+      <div class="filter-group">
+        <button class="fbtn active" data-f="all"       onclick="setFilter(this)">All</button>
+        <button class="fbtn"        data-f="uncounted"  onclick="setFilter(this)">Uncounted</button>
+        <button class="fbtn"        data-f="counted"    onclick="setFilter(this)">Counted</button>
+        <button class="fbtn"        data-f="variance"   onclick="setFilter(this)">Variance</button>
+      </div>
+
+      <button class="export-btn" onclick="exportCSV()">⬇ Export CSV</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:92px">Material</th>
+            <th>Description</th>
+            <th class="r" style="width:82px">SAP Qty</th>
+            <th class="r" style="width:98px">Physical Qty</th>
+            <th class="r" style="width:82px">Variance</th>
+            <th style="width:95px">Counted By</th>
+            <th style="width:120px">Notes</th>
+            <th style="width:70px">Time</th>
+          </tr>
+        </thead>
+        <tbody id="tbl-body"></tbody>
+      </table>
+
+      <div class="table-footer">
+        <span id="row-count-label">Showing 200 items</span>
+        <span id="last-sync"></span>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /app -->
+
+<div id="toast"></div>
+
+<!-- ── Scripts ───────────────────────────────────────────── -->
+<script>
+  /* ══════════════════════════════════════════════════════════
+     CONFIG — swap these two values from your Supabase dashboard
+     Settings → API → Project URL & anon/public key
+  ══════════════════════════════════════════════════════════ */
+  const SUPABASE_URL      = 'https://easfrwilbxypcdooawtt.supabase.co';
+  const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+  const TABLE             = 'cerritos_counts';
+
+  /* ── Material master (embedded from SAP export) ─────────── */
+  const MATERIALS = [
+    [4410336,"Lid Natural L410 PP",280500],[4410321,"Lid Blk Rim L410 PP",490500],
+    [4410198,"Lid Lbld SN Org Sls Med 14oz",63000],[4410197,"Cup Lbld SN Org Sls Med 14oz",56000],
+    [4410196,"Lid lbld SN Org Sls Mild 14oz",63000],[4410195,"Cup Lbld SN Org Sls Mild 14oz",65000],
+    [4410192,"Lid PET Clear 4.8in Dia",201600],[4410184,"Lbl SN Org Salsa Med 14oz Frt",15400],
+    [4410183,"Lbl SN Org Salsa Med 14oz Top",9400],[4410182,"Lbl SN Org Salsa Mild 14oz Frt",14500],
+    [4410181,"Lbl SN Org Salsa Mild 14oz Top",9400],[4410166,"Lbl SN Org Salsa Med 14oz Bck",20500],
+    [4410165,"Lbl SN Org Salsa Mild 14oz Bck",14500],[4410015,'Lid Clear 7" PET',5000],
+    [4410014,'Cup Clear 7" PET',6840],[4409989,"Tub 12oz 4.6 DR12-W",294470],
+    [4409988,"Lid Plain Clear PET",100824],[4409987,"Lid Blk Rim",88008],
+    [4409986,"Cup Plain PET 510 16oz",183724],[4409980,'Lid PET Clear 7" Diameter',136200],
+    [4409979,'Cup PET Clear 7" Diameter',136524],[4409962,"Cup Clarified Blend C 32oz",94430],
+    [4409961,"Lid Rojos By LM Med Cantina Salsa 16oz",75000],[4409960,"Cup Rojos By LM Med Cantina Salsa 16oz",40000],
+    [4409959,"Lid Rojos By LM Mild Cantina Salsa 16oz",37500],[4409958,"Cup Rojos By LM Mild Cantina Salsa 16oz",29000],
+    [4409952,"Case RSC Kraft Purple 6/32oz & 12/14oz",14400],[4409950,"Case RSC Kraft Generic Purple 6/16oz",14477],
+    [4409949,"Case HSC PSD Salsa 12/14oz Top",10432],[4409930,'Case RSC Kraft 7"Dia Pet 510',1330],
+    [4409886,"Case HSC Rojos Blkbean & Cotija",500],[4409885,"Case HSC Top Lyr Dip 12-2/20oz",175],
+    [4409850,"Case RSC PS Rest Mild 6/14oz",1366],[4409849,"Lid PS Pico Salsa Med 14oz",93300],
+    [4409845,"Lid PS Rest Style Salsa Hot 14oz",50250],[4409843,"Lid PS Rest Style Salsa Med 14oz",7580],
+    [4409842,"Cup PS Rest Style Salsa Med 14oz",13540],[4409841,"Lid PS Rest Style Mild 14oz",73905],
+    [4409840,"Cup PS Rest Style Mild 14oz",10387],[4409839,"Lid 6-FL",175750],
+    [4409838,"Cup6-P-225",185100],[4409808,"Lid PSD Mild Salsa 32oz",1800],
+    [4409805,"Cup PSD Med Salsa 32oz",3000],[4409734,"Lid Plain Clear PET T888 12oz",130],
+    [4409693,"Lid ST Org Med 12oz",92810],[4409691,"Lid ST Org Mild 12oz",8700],
+    [4409596,"Seal Prfrm Ring 256X30+7X.05",649250],[4409594,"Lid Sqt PET7CFL 32oz",51525],
+    [4409593,"Lbl Psd Med Fresh Cut Salsa 16oz Bck",29500],[4409592,"Lbl Psd Med Fresh Cut Salsa 16oz Frt",19100],
+    [4409590,"Lbl Psd Mild Fresh Cut Salsa 16oz Bck",88400],[4409589,"Lbl Psd Mild Fresh Cut Salsa 16oz Frt",20600],
+    [4409588,"Lbl Psd Mild Fresh Cut Salsa 16oz Top",55400],[4409585,"Slv Sobeys Compliments 6 Lyr 6pk 850g",38300],
+    [4409584,"Slv Sobeys Compliments 6 Lyr 6pk 425g",411],[4409570,"Seal 283mmx30+8x.05 Clr Prfrm Sqt 32oz",162500],
+    [4409562,"Case RSC PS ST Mild 14oz",2000],[4409540,"Lid PSD Fresh Cut Mild Salsa 16oz",403465],
+    [4409539,"Cup PSD Fresh Cut Mild Salsa 16oz",691000],[4409530,"Case RSC Kraft PP 6/12oz",406],
+    [4409527,"Lid PSD Fresh Cut Med Salsa 16oz",507440],[4409526,"Cup PSD Fresh Cut Med Salsa 16oz",369575],
+    [4409520,"Case RSC PET 510 6/16oz",4200],[4409502,"Case RSC PET Sqt Kraft 6/32oz",3010],
+    [4409500,"Case RSC Kraft PP 6/24oz or 12/12oz",608],[4409417,"Lid Plain Clear PET 510 T618",67600],
+    [4409402,"Lid Plain Blk L409",120000],[4409351,"Cup SN Org Sls Mild 32533 14oz",32200],
+    [4409346,"Cup Sig Select 6 Lyr Dip Mild 32501 28oz",1140],[4409330,"Cup Plain PET 510 T29125-FLAT 16oz",49818],
+    [4409329,"Cup Plain PET 410 14oz & 15oz",10500],[4409323,"Cup Poly Clarified Plain 14oz",14000],
+    [4409315,'Tub 410 12oz 4.6" T881',8700],[4409312,"Cup Clarified Plain 24oz",24000],
+    [4409309,"Cup Clarified Plain T409 12oz",9750],[4409306,"Lbl Silv Fork Mango Pico 12oz Bck",47650],
+    [4409037,"Case DC Btm PSD Fresh Salsas 8/16oz",5102],[4408690,"Lid LM Pico Mild",109500],
+    [4408689,"Cup LM Pico 16oz",95850],[4408688,"Lid LM Fire Rstd Fiery Hab Salsa",12000],
+    [4408687,"Cup LM Fire Rstd Fiery Hab Salsa 14oz",16000],[4408686,"Lid LM Fire Rstd Zesty Serrano Salsa",90000],
+    [4408685,"Cup LM Fire Rstd Zesty Serrano 14oz",149000],[4408684,"Lid LM Fire Rstd Chipotle Gar Salsa Med",36000],
+    [4408683,"Cup LM Fire Rstd Chipotle Gar Salsa 14oz",48000],[4408681,"Lid LM Fire Rstd Smky Pasilla Salsa",60000],
+    [4408680,"Cup LM Fire Rstd Smoky Pasilla 14oz",48000],[4408679,"Cup LM Mango Peach Salsa Mild 24oz",55300],
+    [4408678,"Lid LM Mango Peach Salsa Mild",139500],[4408677,"Cup LM Mango Peach Salsa 16oz",148000],
+    [4408676,"Cup LM Hot Salsa 24oz",28000],[4408675,"Lid LM Hot Salsa",111000],
+    [4408674,"Cup LM Hot Salsa 16oz",93000],[4408670,"Lid PET Plain Clear 5.84in",91200],
+    [4408669,"Lid PET Wide Mouth Blk Rim 5.84in",73872],[4408668,"Lid LM Med Salsa",247500],
+    [4408665,"Cup LM Med Salsa 24oz",45300],[4408664,"Cup LM Med Salsa 16oz",203000],
+    [4408663,"Cup LM Mild Salsa 24oz",45500],[4408662,"Lid LM Mild Salsa",340500],
+    [4408661,"Cup LM Mild Salsa 16oz",235000],[4408658,"Lid LM Avo Salsa Verde Med",24000],
+    [4408657,"Cup LM Avo Verde Salsa Med 14oz",16000],[4408656,"Cup LM Cantina Salsa Mild 24oz",39700],
+    [4408655,"Lid LM Cantina Salsa Mild",127900],[4408654,"Cup LM Cantina Salsa Mild 14oz",28000],
+    [4408609,"Lid ST Org Salsa Med 12oz",45000],[4408608,"Cup ST Org Salsa Med 12oz",25000],
+    [4408606,"Cup ST Org Salsa Mild 14oz",38000],[4408605,"Lid PS Pico Salsa Med 14oz",31500],
+    [4408604,"Cup PS Pico Salsa Med 14oz",27000],[4408603,"Lid PS Rest Style Salsa Hot 14oz",37500],
+    [4408602,"Cup PS Rest Style Salsa Hot 14oz",9000],[4408601,"Lid PS Rest Style Salsa Med 14oz",151500],
+    [4408600,"Cup PS Rest Style Salsa Med 14oz",149000],[4408599,"Lid PS Rest Style Salsa Mild 14oz",75000],
+    [4408598,"Cup PS Rest Style Salsa Mild 14oz",28000],[4408584,"Cup LM Peach Mango Salsa 24oz",21200],
+    [4408580,"Cup LM Hot Salsa 24oz",38280],[4408579,"Lid LM Med Avo Salsa 14oz",9800],
+    [4408578,"Cup LM Med Avo Salsa 14oz",17000],[4408569,"Lid LM Mild Salsa",41500],
+    [4408568,"Cup LM Mild Salsa 16oz",33055],[4408567,"Lid LM Med Salsa",68090],
+    [4408566,"Cup LM Med Salsa 24oz",12000],[4408564,"Cup LM Med Salsa 16oz",38780],
+    [4408563,"Lid LM Peach Mango Salsa",32980],[4408562,"Cup LM Peach Mango Salsa 16oz",33600],
+    [4408560,"Cup LM Mild Salsa 24oz",30100],[4408553,"Lid Nat Plain Flat L410",107500],
+    [4408552,"Lid Wht Plain Flat 410",60100],[4408551,"Lid Plain Blk",653655],
+    [4408546,"Cup Clarified Plain 16oz",883750],[4408545,"Cup Clarified Plain 14oz",125415],
+    [4408543,"Cup Clarified Plain 12oz",8000],[4408542,"Case RSC Purple MS Salsa 6/32oz",625],
+    [4408541,"Case RSC Dept 80 410 PP 6/16oz",1406],[4408534,"Slv Rojos Blkbn & Cotija 6 Lyr 2/20oz",52500],
+    [4408528,"Case RSC 8ct/16oz",2250],[4408526,"Case RSC Salsa 12/16oz",3750],
+    [4408525,"Case RSC 6/24oz, 12/12oz PP",625],[4408524,"Case RSC 2oz PP",905],
+    [4408519,"Lid Blk Rim 710 7In Pet PLW-800551.25",83400],[4407853,"Lbl Silv Fork SW Salsa 12oz Btm",18400],
+    [4407852,"Lbl Silv Fork SW Salsa 12oz Top",29150],[4407728,"Lbl Silv Fork SW Salsa 12oz Frt",48100],
+    [4407727,"Lbl Silv Fork Trad Pico 12oz Frt",16400],[4407726,"Lbl Silv Fork Mango Pico 12oz Frt",52450],
+    [4407725,"Lbl Silv Fork Tomatillo Salsa 12oz Frt",41700],[4407724,"Lbl Silv Fork Med Hatch Chile 12oz Frt",75450],
+    [4407723,"Lbl Silv Fork Hot Salsa 12oz Frt",56000],[4407722,"Lbl Silv Fork Mild Salsa 12oz Frt",100800],
+    [4407679,"Lid Silv Fork Trad Pico 12oz",15500],[4407678,"Cup Silv Fork Trad Pico 12oz",16605],
+    [4407675,"Lbl Silv Fork Trad Pico 12oz Btm",21400],[4407673,"Lbl Silv Fork Trad Pico 12oz Top",12000],
+    [4407580,"Case RSC PET 6/12oz",1468],[4407579,"Case RSC 410 PET 6/24oz",1836],
+    [4407491,"Cup ST Org Med 14oz",2195],[4407490,"Cup ST Org Mild 12oz",8450],
+    [4407407,"Case RSC FC Guac Lyr Dip Purple 6/16oz",672],[4407323,"Case RSC Purple Mrktside Salsa 6/32oz",340],
+    [4407094,'Lid Clear 710 7" PET',100890],[4407093,'Cup Clear 710 7" PET 32oz',5864],
+    [4407089,"Lid Silv Fork SW Corn Salsa 12oz",28686],[4407088,"Cup Silv Fork SW Corn Salsa 12oz",13700],
+    [4407066,"Lid TJ Hot Pico 12oz",43050],[4407065,"Cup TJ Hot Pico 12oz",70000],
+    [4407062,"Lid TJ Bruschetta 14.5oz",89700],[4407061,"Cup TJ Bruschetta 14.5oz",84650],
+    [4407058,"Lid TJ Mild Pico 12oz",48000],[4407057,"Cup TJ Mild Pico 12oz",24680],
+    [4407052,"Lbl Silv Fork Mango Pico 12oz Top",29600],[4407051,"Lid Silv Fork Mango Pico 12oz",7800],
+    [4407050,"Cup Silv Fork Mango Pico 12oz",6000],[4407047,"Lid Silv Fork Org Mild Salsa 12oz",8000],
+    [4407046,"Cup Silv Fork Org Mild Salsa 12oz",8800],[4407045,"Lbl Silv Fork Tomatillo Salsa 12oz Btm",48400],
+    [4407044,"Lbl Silv Fork Tomatillo Salsa 12oz Top",48200],[4407043,"Lid Silv Fork Tomatillo Salsa 12oz",5920],
+    [4407042,"Cup Silv Fork Tomatillo Salsa 12oz",3030],[4407041,"Lbl Silv Fork Med Hatch Chile Btm 12oz",64950],
+    [4407040,"Lbl Silv Fork Med Hatch Chile 12oz Top",81850],[4407039,"Lid Silv Fork Grmet Med Hatch Chile 12oz",25000],
+    [4407038,"Cup Silv Fork Grmet Med Hatch Chile 12oz",46950],[4407037,"Lbl Silv Fork Grmet Mild Salsa Btm 12oz",78998],
+    [4407036,"Lbl Silv Fork Grmet Mild Salsa 12oz Top",99000],[4407034,"Cup Silv Fork Trad Cantina Mild Sls 12oz",4000],
+    [4407033,"Lbl Silv Fork Grmet Hot Salsa Btm 12oz",50450],[4407032,"Lbl Silv Fork Grmet Hot Salsa 12oz Top",66400],
+    [4407031,"Lid Silv Fork Trad Cantina Hot Sls 12oz",21800],[4407030,"Cup Silv Fork Trad Cantina Hot Sls 12oz",25250],
+    [4406963,"Lid Lucky Hab Org Hot Salsa 16oz",20000],[4406959,"Cup Clear Poly 410 HPP 12oz",36000],
+    [4406958,"Lid 410 Poly BURGUNDY",11410],[4406922,"Case RSC Wlm 4/10oz",460],
+    [4406920,"Case RSC Salsa 2 12/16oz",228],[4406855,"Lid Clear 410 Poly",10000],
+    [4406685,"Lid LM Fire Rstd Hatch Chili 14oz",3900],[4406683,"Lid TF Farm Mild Salsa",5000],
+    [4406644,"Lid Clear PET 16oz",211192],[4406625,"Cup LM Fire Rstd Hatch Chili 14oz",8300],
+    [4406576,"Case DC PSD Mixed Salsa Tray 8/32oz",3400],[4406575,"Case HSC Top",450],
+    [4406490,"Case RSC Kraft Generic Purple 6/28oz",7271],[4406388,"Case DC Btm PSD Mango/Pine Salsa 12/14oz",9170],
+    [4406387,"Lid PSD Swt Spcy Pine Salsa 14oz",60000],[4406386,"Cup PSD Swt Spcy Pine Salsa 14oz",54000],
+    [4406385,"Lid PSD Mango Lime Chamoy Salsa 14oz",60000],[4406384,"Cup PSD Mang Lime Chamoy Salsa 14oz",64000],
+    [4406346,"Lbl Silv Fork Med Rstd Sq Pet 12oz Btm",34200],[4406345,"Lbl Silv Fork Med Rstd Sq Pet 12oz Frt",33000],
+    [4406344,"Lbl Silv Fork Med Rstd Sq Pet 12oz Top",29300],[4406338,"Lid LM Rstd Hab 16oz",23900],
+    [4406337,"Cup LM Rstd Hab 16oz",89430],[4406334,"Lid LM Rstd Chipotle Garlic 16oz",146355],
+    [4406333,"Cup LM Rstd Chipotle Garlic 16oz",134347],[4406329,"Lid LM Rstd Pasilla 16oz",85760],
+    [4406328,"Cup LM Rstd Pasilla 16oz",90750],[4406320,"Lid Lbld Mrktside Mild Cantina 32oz",12750],
+    [4406315,"Case RSC Kraft Purple 21 1/8 X 7 1/8 X 5",964],[4406250,"Lid LM Med Avo Salsa 14oz",10000],
+    [4406249,"Lid TF Farm Med Salsa",7750],[4406243,"Lid LM Mild Salsa",20000],
+    [4406237,"Lid TF Farm Mango Salsa",9700],[4406236,"Lid TF Farm Pico",3565],
+    [4406235,"Lid TF Farm Cantina Salsa",20000],[4406230,"Cup LM Med Avo Salsa 14oz",12000],
+    [4406224,"Cup LM Cantina Salsa 24oz",39350],[4406222,"Cup TF Farm Pico 16oz",26000],
+    [4406221,"Cup TF Farm Cantina Salsa 16oz",7850],[4406220,"Cup TF Farm Mango Salsa 14oz",5500],
+    [4406219,"Cup TF Farm Med Salsa 16oz",500],[4406218,"Cup TF Farm Mild Salsa 16oz",4500],
+    [4406217,"Cup LM Hot Salsa 24oz",43000],[4406216,"Cup LM Med Salsa 24oz",22500],
+    [4406215,"Cup LM Mild Salsa 24oz",1750],[4406214,"Cup LM Pico 16oz",5700],
+    [4406212,"Cup LM Cantina Salsa 14oz",41000],[4406210,"Cup LM Hot Salsa 16oz",16820],
+    [4406209,"Cup LM Mild Salsa 16oz",1500],[4406208,"Cup LM Med Salsa 16oz",1400],
+    [4406200,"Case RSC 410 HDPE 6/24oz",1295],[4405944,"Lid Plain Ylw 410",196000],
+    [4405926,"Lid LM Fire Rstd Hatch Chili",8000],[4405925,"Cup LM Fire Rstd Hatch Chili 14oz",8000],
+    [4405922,"Lid LM Hot Salsa",32180],[4405921,"Cup LM Hot Salsa 16oz",22350],
+    [4405912,"Lid LM Pico",1500],[4405906,"Cup LM Cilantro Salsa 16oz",70990],
+    [4405876,"Lid Lbld Psd Fresh Cut Med Salsa 16oz",2750],[4405875,"Cup Lbld Psd Fresh Cut Med Salsa 16oz",2000],
+    [4405874,"Lid Lbld Psd Fresh Cut Mild Sls 16oz",22100],[4405873,"Cup Lbld Psd Fresh Cut Mild Sls 16oz",15095],
+    [4405687,"Case DC Rojo Chkn Ranch 6 Lyr 12-2/20oz",257],[4405547,"Case DC Btm PSD Lyr Dip 6/15oz",600],
+    [4405544,"Case HSC SN Org Sls Mild Top 8/14oz",5000],[4405535,"Case HSC Top Salsas 8/16oz",1800],
+    [4404917,"Cup Lbld FC Fire Rstd Red Salsa 12oz",24000],[4404244,"Cup Round 410 PET T884-D 24oz",78880],
+    [4403478,"Case RSC PS Pico Med 6/14oz",964],[4403476,"Case RSC PS Rest Hot 6/14oz",716],
+    [4402737,"Cup Plain Clamshell 12oz",20800],[4402677,"Lid Lbld Silv Fork Med Rstd Sls 12oz",14400],
+    [4402676,"Cup Lbld Silv Fork Med Rstd Sls 12oz",15600],[4401679,"Seal Prfrm .05 Clear Rnd PVC 238 x 35+12",844000],
+    [4401609,"Pad Pallet Warehouse 39x47",500],[4401602,"Lid Plain Clamshell 12oz",27300],
+    [4401484,"Lid Pet Wide Mouth Blk Rim T618",15840],[4401081,'Corner Post 31"',1560],
+    [4400986,"Lid Lbld PSD Red Chil Salsa 14oz",6750],[4400984,"Lid Lbld PSD Rstd Tomatillo Salsa 14oz",6950],
+    [4400981,"Case DC Btm PSD Tom/Chili Salsa 12/14oz",872],[4400947,"Lid TJ Buschetta 14.5oz",43850],
+    [4400940,"Cup TJ Mild Pico 12oz",99031],[4400939,"Cup TJ Hot Pico 12oz",88000],
+    [4400938,"Cup TJ Bruschetta 14.5oz",124000],[4400929,"Lid Lbld PSD Fresh Cut Med Salsa 16oz",255900],
+    [4400928,"Cup Lbld PSD Fresh Cut Med Salsa 16oz",252950],[4400927,"Lid Lbld PSD Fresh Cut Mild Sls 16oz",226800],
+    [4400926,"Cup Lbld PSD Fresh Cut Mild Sls 16oz",221250],[4400920,"Slv Rojos/FC 5 Lyr Dip 28oz",133870],
+    [4400901,"Lbl FC Cilantro Fire Rstd Mild 12oz Bck",53700],[4400825,"Lid Plain Red 410",61550],
+    [3309106,"Oil Canola Non-GMO",18900],[3307556,"Oil Olive",10500]
+  ];
+
+  /* ── State ──────────────────────────────────────────────── */
+  let db           = null;
+  let counts       = {};      // { materialId: { physical_qty, counted_by, notes, updated_at } }
+  let currentUser  = '';
+  let activeFilter = 'all';
+  let saveTimers   = {};      // debounce per material
+
+  /* ── Supabase init ──────────────────────────────────────── */
+  function initSupabase() {
+    const { createClient } = supabase;
+    db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+
+  /* ── Setup screen ───────────────────────────────────────── */
+  const nameInput = document.getElementById('setup-name');
+  const startBtn  = document.getElementById('start-btn');
+
+  nameInput.addEventListener('input', () => {
+    startBtn.disabled = nameInput.value.trim().length < 1;
+  });
+  nameInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !startBtn.disabled) startCounting();
+  });
+
+  async function startCounting() {
+    const name = nameInput.value.trim();
+    if (!name) return;
+    currentUser = name;
+    try { localStorage.setItem('cerritos_user', name); } catch(e) {}
+
+    document.getElementById('setup-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('user-label').textContent = 'Counting as: ' + name;
+
+    setConnStatus('connecting');
+    await loadAllCounts();
+    renderTable();
+    subscribeRealtime();
+  }
+
+  function changeUser() {
+    document.getElementById('setup-screen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+    nameInput.value = '';
+    startBtn.disabled = true;
+  }
+
+  /* ── Connection status dot ──────────────────────────────── */
+  function setConnStatus(state) {
+    const dot   = document.getElementById('conn-dot');
+    const label = document.getElementById('conn-label');
+    dot.className = 'dot';
+    if (state === 'live')        { dot.classList.add('live');  label.textContent = 'Live'; }
+    else if (state === 'saving') { dot.classList.add('saving'); label.textContent = 'Saving…'; }
+    else if (state === 'error')  { dot.classList.add('error'); label.textContent = 'Error'; }
+    else                         { label.textContent = 'Connecting…'; }
+  }
+
+  /* ── Load all counts from Supabase ─────────────────────── */
+  async function loadAllCounts() {
+    try {
+      const { data, error } = await db.from(TABLE).select('*');
+      if (error) throw error;
+      counts = {};
+      (data || []).forEach(row => { counts[row.material_id] = row; });
+      setConnStatus('live');
+      updateLastSync();
+    } catch (err) {
+      console.error('Load error:', err);
+      setConnStatus('error');
+      showToast('Could not load data — check Supabase config');
+    }
+  }
+
+  /* ── Realtime subscription ──────────────────────────────── */
+  function subscribeRealtime() {
+    db.channel('cerritos_counts_changes')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: TABLE },
+        (payload) => {
+          const row = payload.new || payload.old;
+          if (!row) return;
+          const id  = row.material_id;
+
+          if (payload.eventType === 'DELETE') {
+            delete counts[id];
+          } else {
+            counts[id] = payload.new;
+          }
+
+          /* Update only the affected row in the DOM */
+          updateRowDOM(id);
+          updateStats();
+          updateLastSync();
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') setConnStatus('live');
+        else if (status === 'CHANNEL_ERROR') setConnStatus('error');
+      });
+  }
+
+  /* ── Save a single row (debounced per material) ─────────── */
+  function scheduleSave(materialId) {
+    if (saveTimers[materialId]) clearTimeout(saveTimers[materialId]);
+    saveTimers[materialId] = setTimeout(() => saveRow(materialId), 700);
+  }
+
+  async function saveRow(materialId) {
+    const c = counts[materialId];
+    if (!c) {
+      /* Cleared — delete from DB */
+      try {
+        setConnStatus('saving');
+        const { error } = await db.from(TABLE).delete().eq('material_id', materialId);
+        if (error) throw error;
+        setConnStatus('live');
+      } catch (err) {
+        console.error('Delete error:', err);
+        setConnStatus('error');
+        showToast('Save failed — check connection');
+      }
+      return;
+    }
+
+    try {
+      setConnStatus('saving');
+      const { error } = await db.from(TABLE).upsert({
+        material_id:  materialId,
+        physical_qty: c.physical_qty,
+        counted_by:   c.counted_by,
+        notes:        c.notes || '',
+        updated_at:   new Date().toISOString()
+      }, { onConflict: 'material_id' });
+
+      if (error) throw error;
+      setConnStatus('live');
+    } catch (err) {
+      console.error('Save error:', err);
+      setConnStatus('error');
+      showToast('Save failed — check connection');
+    }
+  }
+
+  /* ── Input handlers ─────────────────────────────────────── */
+  function onQtyChange(materialId, inputEl) {
+    const val = inputEl.value.trim();
+    inputEl.style.borderColor = '';
+
+    if (val === '') {
+      delete counts[materialId];
+    } else {
+      const qty = parseInt(val, 10);
+      if (isNaN(qty) || qty < 0) { inputEl.style.borderColor = 'var(--danger)'; return; }
+      const existing = counts[materialId] || {};
+      counts[materialId] = {
+        material_id:  materialId,
+        physical_qty: qty,
+        counted_by:   currentUser,
+        notes:        existing.notes || '',
+        updated_at:   new Date().toISOString()
+      };
+    }
+
+    updateRowDOM(materialId);
+    updateStats();
+    scheduleSave(materialId);
+  }
+
+  function onNotesChange(materialId, inputEl) {
+    if (counts[materialId]) {
+      counts[materialId].notes = inputEl.value.trim();
+      scheduleSave(materialId);
+    }
+  }
+
+  /* ── DOM helpers ────────────────────────────────────────── */
+  function fmtTime(isoStr) {
+    if (!isoStr) return '';
+    const d = new Date(isoStr);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function varInfo(physQty, sapQty) {
+    if (physQty === null || physQty === undefined) return { cls: 'var-none', text: '—' };
+    const diff = physQty - sapQty;
+    const text  = (diff >= 0 ? '+' : '') + diff.toLocaleString();
+    const cls   = diff === 0 ? 'var-zero' : diff > 0 ? 'var-positive' : 'var-negative';
+    return { cls, text };
+  }
+
+  function updateRowDOM(materialId) {
+    const mat = MATERIALS.find(m => m[0] === materialId);
+    if (!mat) return;
+    const [, , sap] = mat;
+    const c        = counts[materialId];
+    const physQty  = c ? c.physical_qty : null;
+    const { cls, text } = varInfo(physQty, sap);
+
+    const varEl  = document.getElementById('var-'  + materialId);
+    const byEl   = document.getElementById('by-'   + materialId);
+    const timeEl = document.getElementById('time-' + materialId);
+    const row    = document.getElementById('row-'  + materialId);
+    const qtyEl  = document.getElementById('qty-'  + materialId);
+
+    if (varEl)  { varEl.textContent = text; varEl.className = 'var-cell ' + cls; }
+    if (byEl)   { byEl.textContent  = c ? (c.counted_by || '') : ''; }
+    if (timeEl) { timeEl.textContent = c ? fmtTime(c.updated_at) : ''; }
+    if (qtyEl && document.activeElement !== qtyEl) {
+      qtyEl.value = physQty !== null && physQty !== undefined ? physQty : '';
+    }
+
+    if (row) {
+      row.classList.remove('row-match', 'row-variance');
+      if (physQty !== null && physQty !== undefined) {
+        row.classList.add(physQty === sap ? 'row-match' : 'row-variance');
+      }
+    }
+  }
+
+  /* ── Full table render (called once on load) ────────────── */
+  function renderTable() {
+    const tbody = document.getElementById('tbl-body');
+    let html = '';
+
+    MATERIALS.forEach(([id, desc, sap]) => {
+      const c       = counts[id];
+      const physQty = c ? c.physical_qty : null;
+      const notes   = c ? (c.notes || '') : '';
+      const by      = c ? (c.counted_by || '') : '';
+      const ts      = c ? fmtTime(c.updated_at) : '';
+      const { cls, text } = varInfo(physQty, sap);
+      let rowCls = '';
+      if (physQty !== null && physQty !== undefined) {
+        rowCls = physQty === sap ? 'row-match' : 'row-variance';
+      }
+
+      html += `<tr id="row-${id}" class="${rowCls}">
+        <td><span class="mat-id">${id}</span></td>
+        <td><span class="desc">${escHtml(desc)}</span></td>
+        <td class="r"><span class="sap-qty">${sap.toLocaleString()}</span></td>
+        <td class="r">
+          <input class="qty-input" id="qty-${id}" type="number" min="0" step="1"
+                 placeholder="—"
+                 value="${physQty !== null && physQty !== undefined ? physQty : ''}"
+                 onchange="onQtyChange(${id},this)"
+                 oninput="onQtyChange(${id},this)" />
+        </td>
+        <td class="r"><span class="var-cell ${cls}" id="var-${id}">${text}</span></td>
+        <td><span class="by-cell" id="by-${id}">${escHtml(by)}</span></td>
+        <td>
+          <input class="notes-input" type="text" placeholder="notes…"
+                 value="${escHtml(notes)}"
+                 onchange="onNotesChange(${id},this)" />
+        </td>
+        <td><span class="time-cell" id="time-${id}">${ts}</span></td>
+      </tr>`;
+    });
+
+    tbody.innerHTML = html;
+    updateStats();
+    applyFilters();
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+
+  /* ── Stats & progress ───────────────────────────────────── */
+  function updateStats() {
+    const total   = MATERIALS.length;
+    const counted = Object.keys(counts).length;
+    const remain  = total - counted;
+    let varCount  = 0;
+
+    MATERIALS.forEach(([id, , sap]) => {
+      const c = counts[id];
+      if (c && c.physical_qty !== sap) varCount++;
+    });
+
+    document.getElementById('s-total').textContent     = total;
+    document.getElementById('s-counted').textContent   = counted;
+    document.getElementById('s-remaining').textContent = remain;
+    document.getElementById('s-variance').textContent  = varCount;
+
+    const pct = Math.round((counted / total) * 100);
+    document.getElementById('prog-fill').style.width = pct + '%';
+  }
+
+  function updateLastSync() {
+    document.getElementById('last-sync').textContent =
+      'Synced ' + new Date().toLocaleTimeString();
+  }
+
+  /* ── Filters ────────────────────────────────────────────── */
+  function setFilter(btn) {
+    document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = btn.dataset.f;
+    applyFilters();
+  }
+
+  function applyFilters() {
+    const q = document.getElementById('search-input').value.trim().toLowerCase();
+    let visible = 0;
+
+    MATERIALS.forEach(([id, desc, sap]) => {
+      const row = document.getElementById('row-' + id);
+      if (!row) return;
+
+      const c       = counts[id];
+      const physQty = c ? c.physical_qty : null;
+
+      let matchFilter = true;
+      if (activeFilter === 'uncounted') matchFilter = physQty === null || physQty === undefined;
+      else if (activeFilter === 'counted')  matchFilter = physQty !== null && physQty !== undefined;
+      else if (activeFilter === 'variance') matchFilter = physQty !== null && physQty !== undefined && physQty !== sap;
+
+      let matchSearch = true;
+      if (q) matchSearch = String(id).includes(q) || desc.toLowerCase().includes(q);
+
+      const show = matchFilter && matchSearch;
+      row.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+
+    document.getElementById('row-count-label').textContent =
+      'Showing ' + visible + ' of ' + MATERIALS.length + ' items';
+  }
+
+  /* ── CSV Export ─────────────────────────────────────────── */
+  function exportCSV() {
+    const header = ['Material','Description','SAP Qty','Physical Qty','Variance','Counted By','Notes','Timestamp'];
+    const rows   = [header.join(',')];
+
+    MATERIALS.forEach(([id, desc, sap]) => {
+      const c       = counts[id];
+      const physQty = (c && c.physical_qty !== null && c.physical_qty !== undefined) ? c.physical_qty : '';
+      const diff    = physQty !== '' ? physQty - sap : '';
+      const by      = c ? (c.counted_by || '') : '';
+      const notes   = c ? (c.notes || '') : '';
+      const ts      = c ? (c.updated_at ? new Date(c.updated_at).toLocaleString() : '') : '';
+      rows.push([id, `"${desc.replace(/"/g,'""')}"`, sap, physQty, diff,
+                 `"${by}"`, `"${notes.replace(/"/g,'""')}"`, `"${ts}"`].join(','));
+    });
+
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `cerritos_count_${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('CSV exported');
+  }
+
+  /* ── Toast ──────────────────────────────────────────────── */
+  let toastTimer = null;
+  function showToast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+  }
+
+  /* ── Boot ───────────────────────────────────────────────── */
+  initSupabase();
+
+  /* Restore saved user name for convenience */
+  try {
+    const saved = localStorage.getItem('cerritos_user');
+    if (saved) { nameInput.value = saved; startBtn.disabled = false; }
+  } catch(e) {}
+</script>
+
+</body>
+</html>
