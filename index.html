@@ -306,82 +306,112 @@
     }
     .export-btn:hover { background: var(--surface-2); }
 
-    /* ── Material cards (primary mobile view) ─────────── */
-    .mat-list { padding: .75rem 1rem; display: flex; flex-direction: column; gap: .6rem; }
+    /* ── Group sections ───────────────────────────────── */
+    .group-section { border-bottom: 1px solid var(--border); }
+    .group-section:last-child { border-bottom: none; }
 
-    .mat-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--r-md);
-      overflow: hidden;
-      transition: box-shadow .15s;
+    .group-header {
+      width: 100%;
+      display: flex; align-items: center; gap: 10px;
+      padding: .7rem 1rem;
+      background: var(--surface-2);
+      border: none; cursor: pointer; font-family: inherit;
+      text-align: left;
+      -webkit-tap-highlight-color: transparent;
+      transition: background .12s;
     }
-    .mat-card.counted-card  { border-left: 3px solid var(--ok); }
-    .mat-card.variance-card { border-left: 3px solid var(--bad); }
+    .group-header:hover { background: color-mix(in srgb, var(--surface-2) 85%, var(--border)); }
 
-    .mat-card-head {
-      display: flex; align-items: baseline; gap: 8px;
-      padding: .6rem .85rem .5rem;
+    .gh-icon {
+      width: 28px; height: 28px; border-radius: var(--r-sm);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 14px;
+    }
+    .gh-body  { flex: 1; min-width: 0; }
+    .gh-name  { font-size: 13px; font-weight: 700; color: var(--text); display: block; }
+    .gh-sub   { font-size: 11px; color: var(--text-3); margin-top: 1px; display: flex; align-items: center; gap: 6px; }
+
+    .gh-bar-wrap { flex: 1; max-width: 60px; height: 3px; background: var(--border-med); border-radius: 2px; overflow: hidden; }
+    .gh-bar-fill { height: 100%; background: var(--amber); border-radius: 2px; transition: width .4s ease; }
+
+    .gh-badge {
+      font-size: 11px; font-weight: 700;
+      background: var(--surface); border: 1px solid var(--border-med);
+      border-radius: 99px; padding: 1px 8px;
+      color: var(--text-2); flex-shrink: 0;
+    }
+    .gh-badge.done { background: var(--ok-bg); color: var(--ok); border-color: transparent; }
+
+    .gh-chevron {
+      font-size: 16px; color: var(--text-3);
+      flex-shrink: 0; transition: transform .2s;
+      width: 20px; text-align: center; line-height: 1;
+    }
+    .gh-chevron.collapsed { transform: rotate(-90deg); }
+
+    .group-items { background: var(--surface); }
+    .group-items.collapsed { display: none; }
+
+    /* ── Compact material rows ────────────────────────── */
+    .mat-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 1rem;
       border-bottom: 1px solid var(--border);
+      min-height: 58px;
+      transition: background .12s;
     }
-    .mat-num  { font-family: var(--mono); font-size: 11px; color: var(--text-3); flex-shrink: 0; }
-    .mat-desc { font-size: 13px; font-weight: 600; flex: 1; line-height: 1.35; }
+    .mat-row:last-child { border-bottom: none; }
+    .mat-row.row-match    { background: color-mix(in srgb, var(--ok-bg)  35%, transparent); }
+    .mat-row.row-variance { background: color-mix(in srgb, var(--bad-bg) 35%, transparent); }
 
-    .mat-card-body { padding: .65rem .85rem; display: grid; grid-template-columns: 1fr 1fr; gap: .5rem .75rem; align-items: center; }
+    .row-dot {
+      width: 9px; height: 9px; border-radius: 50%;
+      flex-shrink: 0; background: var(--border-med);
+      transition: background .2s;
+    }
+    .row-dot.dot-ok  { background: var(--ok); }
+    .row-dot.dot-bad { background: var(--bad); }
 
-    .body-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text-3); }
+    .row-info { flex: 1; min-width: 0; }
+    .row-desc { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.3;
+                white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .row-meta { font-size: 11px; color: var(--text-3); margin-top: 2px; }
 
-    .sap-val { font-family: var(--mono); font-size: 15px; color: var(--text-2); text-align: right; }
+    .row-right { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
 
-    .qty-input-card {
-      grid-column: 2;
-      width: 100%; height: 44px;
-      padding: 0 12px;
-      font-family: var(--mono); font-size: 18px; font-weight: 700;
-      text-align: right;
+    .row-qty {
+      width: 82px; height: 36px;
+      padding: 0 8px; text-align: right;
+      font-family: var(--mono); font-size: 15px; font-weight: 700;
       background: var(--surface-2);
       border: 1.5px solid var(--border-med);
       border-radius: var(--r-sm);
       color: var(--text);
-      outline: none;
       -webkit-appearance: none; appearance: none;
-      transition: border-color .15s, box-shadow .15s;
+      outline: none; transition: border-color .15s, box-shadow .15s;
     }
-    .qty-input-card:focus {
+    .row-qty:focus {
       border-color: var(--amber);
       box-shadow: 0 0 0 3px rgba(184,124,32,.15);
       background: var(--surface);
     }
-
-    .var-badge {
-      font-family: var(--mono); font-size: 13px; font-weight: 700;
-      text-align: right; align-self: center;
+    .row-var {
+      font-family: var(--mono); font-size: 11px; font-weight: 700;
+      text-align: right; white-space: nowrap;
     }
-    .vb-none { color: var(--text-3); font-weight: 400; }
-    .vb-zero { color: var(--ok); }
-    .vb-pos  { color: var(--ok); }
-    .vb-neg  { color: var(--bad); }
+    .row-var.vb-none { color: var(--text-3); font-weight: 400; }
+    .row-var.vb-zero { color: var(--ok); }
+    .row-var.vb-pos  { color: var(--ok); }
+    .row-var.vb-neg  { color: var(--bad); }
 
-    .mat-card-foot {
-      padding: .5rem .85rem .6rem;
-      border-top: 1px solid var(--border);
-      display: flex; flex-direction: column; gap: .4rem;
-    }
-
-    .notes-input-card {
-      width: 100%; height: 38px;
-      padding: 0 10px; font-size: 14px;
-      background: var(--surface-2);
+    /* Mobile list container */
+    .mat-list {
+      background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: var(--r-sm);
-      color: var(--text-2); font-family: inherit;
-      outline: none;
-      -webkit-appearance: none; appearance: none;
+      border-radius: var(--r-lg);
+      margin: .75rem 1rem;
+      overflow: hidden;
     }
-    .notes-input-card:focus { border-color: var(--amber); background: var(--surface); }
-    .notes-input-card::placeholder { color: var(--text-3); }
-
-    .by-time { font-size: 11px; color: var(--text-3); }
 
     /* Row count footer */
     .list-footer {
@@ -392,7 +422,6 @@
       background: var(--surface);
     }
 
-    /* No results */
     .no-rows {
       text-align: center; padding: 3rem 1rem;
       color: var(--text-2); font-size: 14px;
@@ -1293,17 +1322,20 @@
     const by   = c ? (c.counted_by || '') : '';
     const ts   = c ? fmtTime(c.updated_at) : '';
 
-    /* ---- Card ---- */
+    /* ---- Compact row (mobile) ---- */
     const card = document.getElementById('card-' + materialId);
     if (card) {
-      card.className = 'mat-card' + (phys !== null ? (phys === mat.sap_qty ? ' counted-card' : ' variance-card') : '');
-      const vb = card.querySelector('.var-badge');
-      if (vb) { vb.textContent = text; vb.className = `var-badge ${cls}`; }
+      const dotCls = phys === null ? '' : (phys === mat.sap_qty ? 'dot-ok' : 'dot-bad');
+      const rowCls = phys === null ? '' : (phys === mat.sap_qty ? 'row-match' : 'row-variance');
+      card.className = `mat-row ${rowCls}`;
+      const dot = card.querySelector('.row-dot');
+      if (dot) dot.className = `row-dot ${dotCls}`;
+      const rv = document.getElementById('rv-' + materialId);
+      if (rv) { rv.textContent = text; rv.className = `row-var ${cls}`; }
       const qi = card.querySelector('.qty-input-card');
       if (qi && document.activeElement !== qi) qi.value = phys !== null ? phys : '';
-      const bt = card.querySelector('.by-time');
-      if (bt) bt.textContent = by ? `${by} · ${ts}` : '';
     }
+    updateGroupHeader(getGroup(mat.description));
 
     /* ---- Table row ---- */
     const row = document.getElementById('row-' + materialId);
@@ -1332,43 +1364,117 @@
     applyFilters();
   }
 
-  /* Mobile cards */
+  /* ── Group helpers ───────────────────────────────────── */
+  const GROUP_ORDER  = ['Cups','Lids','Labels','Cases','Seals','Sleeves','Tubs','Oils','Other'];
+  const GROUP_ICONS  = { Cups:'🥤', Lids:'🔵', Labels:'🏷️', Cases:'📦', Seals:'🔒', Sleeves:'🫧', Tubs:'🪣', Oils:'🫗', Other:'📋' };
+  let groupExpanded  = {};
+
+  function getGroup(desc) {
+    const d = String(desc).toLowerCase();
+    if (d.startsWith('cup'))  return 'Cups';
+    if (d.startsWith('lid'))  return 'Lids';
+    if (d.startsWith('lbl'))  return 'Labels';
+    if (d.startsWith('case')) return 'Cases';
+    if (d.startsWith('seal')) return 'Seals';
+    if (d.startsWith('slv'))  return 'Sleeves';
+    if (d.startsWith('tub'))  return 'Tubs';
+    if (d.startsWith('oil'))  return 'Oils';
+    return 'Other';
+  }
+
+  function toggleGroup(name) {
+    groupExpanded[name] = !groupExpanded[name];
+    const items   = document.getElementById('gi-'  + name);
+    const chevron = document.getElementById('ghc-' + name);
+    if (items)   items.classList.toggle('collapsed', !groupExpanded[name]);
+    if (chevron) chevron.classList.toggle('collapsed', !groupExpanded[name]);
+  }
+
+  function updateGroupHeader(name) {
+    const mats    = MATERIALS.filter(m => getGroup(m.description) === name);
+    const counted = mats.filter(m => counts[m.material_id] != null).length;
+    const total   = mats.length;
+    const pct     = total ? Math.round((counted / total) * 100) : 0;
+    const done    = counted === total && total > 0;
+
+    const badge = document.getElementById('ghb-' + name);
+    if (badge) { badge.textContent = `${counted} / ${total}`; badge.className = 'gh-badge' + (done ? ' done' : ''); }
+
+    const bar = document.getElementById('ghbar-' + name);
+    if (bar) bar.style.width = pct + '%';
+  }
+
+  /* Mobile compact rows */
   function renderCards() {
     const list = document.getElementById('card-list');
+
+    /* Build groups */
+    const groups = {};
+    GROUP_ORDER.forEach(g => { groups[g] = []; });
+    MATERIALS.forEach(mat => { const g = getGroup(mat.description); if (groups[g]) groups[g].push(mat); });
+
+    /* Default: expand all groups */
+    GROUP_ORDER.forEach(g => { if (groupExpanded[g] === undefined) groupExpanded[g] = true; });
+
     let html = '';
-    MATERIALS.forEach(({ material_id: id, description: desc, sap_qty: sap }) => {
-      const c    = counts[id];
-      const phys = c ? c.physical_qty : null;
-      const { cls, text } = varInfo(phys, sap);
-      const cardCls = phys !== null ? (phys === sap ? ' counted-card' : ' variance-card') : '';
-      const by  = c ? (c.counted_by || '') : '';
-      const ts  = c ? fmtTime(c.updated_at) : '';
+
+    GROUP_ORDER.forEach(name => {
+      const mats = groups[name];
+      if (!mats.length) return;
+
+      const counted = mats.filter(m => counts[m.material_id] != null).length;
+      const total   = mats.length;
+      const pct     = Math.round((counted / total) * 100);
+      const done    = counted === total;
+      const expanded = groupExpanded[name];
+
       html += `
-<div class="mat-card${cardCls}" id="card-${id}">
-  <div class="mat-card-head">
-    <span class="mat-num">${id}</span>
-    <span class="mat-desc">${escH(desc)}</span>
-  </div>
-  <div class="mat-card-body">
-    <span class="body-label">SAP Qty</span>
-    <span class="sap-val">${Number(sap).toLocaleString()}</span>
-    <span class="body-label">Physical Qty</span>
-    <input class="qty-input-card" type="number" inputmode="numeric" min="0" step="1"
-           placeholder="—"
-           value="${phys !== null ? phys : ''}"
-           onkeydown="onQtyKeydown(event,${id},this)"
-           onblur="onQtyBlur(${id},this)" />
-    <span class="body-label">Variance</span>
-    <span class="var-badge ${cls}">${text}</span>
-  </div>
-  <div class="mat-card-foot">
-    <input class="notes-input-card" type="text" placeholder="Notes (optional)…"
-           value="${escH(c ? (c.notes || '') : '')}"
-           onchange="onNotesChange(${id},this)" />
-    <span class="by-time">${by ? escH(by) + ' · ' + ts : ''}</span>
+<div class="group-section" id="grp-${name}">
+  <button class="group-header" onclick="toggleGroup('${name}')">
+    <span class="gh-icon">${GROUP_ICONS[name] || '📋'}</span>
+    <div class="gh-body">
+      <span class="gh-name">${name}</span>
+      <div class="gh-sub">
+        <span id="ghb-${name}" class="gh-badge${done ? ' done' : ''}">${counted} / ${total}</span>
+        <div class="gh-bar-wrap"><div class="gh-bar-fill" id="ghbar-${name}" style="width:${pct}%"></div></div>
+      </div>
+    </div>
+    <span class="gh-chevron${expanded ? '' : ' collapsed'}" id="ghc-${name}">›</span>
+  </button>
+
+  <div class="group-items${expanded ? '' : ' collapsed'}" id="gi-${name}">`;
+
+      mats.forEach(({ material_id: id, description: desc, sap_qty: sap }) => {
+        const c    = counts[id];
+        const phys = c ? c.physical_qty : null;
+        const { cls, text } = varInfo(phys, sap);
+        const dotCls  = phys === null ? '' : (phys === sap ? 'dot-ok' : 'dot-bad');
+        const rowCls  = phys === null ? '' : (phys === sap ? 'row-match' : 'row-variance');
+        const vCls    = cls.replace('vb-', 'vb-');   // reuse same classes
+
+        html += `
+    <div class="mat-row ${rowCls}" id="card-${id}">
+      <span class="row-dot ${dotCls}"></span>
+      <div class="row-info">
+        <div class="row-desc">${escH(desc)}</div>
+        <div class="row-meta">${id} &nbsp;·&nbsp; SAP ${Number(sap).toLocaleString()}</div>
+      </div>
+      <div class="row-right">
+        <input class="row-qty qty-input-card" type="number" inputmode="numeric" min="0" step="1"
+               placeholder="—"
+               value="${phys !== null ? phys : ''}"
+               onkeydown="onQtyKeydown(event,${id},this)"
+               onblur="onQtyBlur(${id},this)" />
+        <span class="row-var ${cls}" id="rv-${id}">${text}</span>
+      </div>
+    </div>`;
+      });
+
+      html += `
   </div>
 </div>`;
     });
+
     list.innerHTML = html || `<div class="no-rows">No materials loaded.</div>`;
   }
 
@@ -1539,6 +1645,10 @@
     const ql = q.trim().toLowerCase();
     let visible = 0;
 
+    /* Track visibility per group for group-section show/hide */
+    const groupVisible = {};
+    GROUP_ORDER.forEach(g => { groupVisible[g] = 0; });
+
     MATERIALS.forEach(({ material_id: id, description: desc, sap_qty: sap }) => {
       const c    = counts[id];
       const phys = c ? c.physical_qty : null;
@@ -1547,18 +1657,21 @@
       if (activeFilter === 'uncounted') pass = phys === null || phys === undefined;
       else if (activeFilter === 'counted')  pass = phys !== null && phys !== undefined;
       else if (activeFilter === 'variance') pass = phys !== null && phys !== undefined && phys !== sap;
-
       if (pass && ql) pass = String(id).includes(ql) || desc.toLowerCase().includes(ql);
 
       const show = pass ? '' : 'none';
-
       const card = document.getElementById('card-' + id);
       if (card) card.style.display = show;
-
-      const row  = document.getElementById('row-' + id);
+      const row  = document.getElementById('row-'  + id);
       if (row)  row.style.display  = show;
 
-      if (pass) visible++;
+      if (pass) { visible++; groupVisible[getGroup(desc)]++; }
+    });
+
+    /* Show/hide entire group sections */
+    GROUP_ORDER.forEach(name => {
+      const grp = document.getElementById('grp-' + name);
+      if (grp) grp.style.display = groupVisible[name] > 0 ? '' : 'none';
     });
 
     const lbl = `Showing ${visible} of ${MATERIALS.length}`;
