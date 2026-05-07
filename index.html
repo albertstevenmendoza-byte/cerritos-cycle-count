@@ -855,8 +855,18 @@
       <span class="cm-label">SAP Qty</span>
       <span class="cm-val muted" id="cm-sap"></span>
 
-      <span class="cm-label">Your count</span>
+      <div class="cm-divider"></div>
+
+      <span class="cm-label">Current total</span>
+      <span class="cm-val muted" id="cm-prev"></span>
+
+      <span class="cm-label">This entry</span>
       <span class="cm-val highlight" id="cm-count"></span>
+
+      <div class="cm-divider"></div>
+
+      <span class="cm-label">New total</span>
+      <span class="cm-val" id="cm-total"></span>
 
       <span class="cm-label">Variance</span>
       <span class="cm-val" id="cm-var"></span>
@@ -1167,101 +1177,93 @@
   }
 
   function onQtyBlur(materialId, inputEl) {
-    /* If there's already a pending confirmation (any material), don't stack another */
+    /* Only act if the user actually typed something */
+    if (!dirtyInputs.has(materialId)) return;
     if (pendingEntry) return;
     if (document.getElementById('confirm-modal').style.display !== 'none') return;
 
     const val = inputEl.value.trim();
     inputEl.style.borderColor = '';
 
-    /* Compare against current confirmed/synced value — not optimistic local state */
-    const confirmed = counts[materialId];
-    const prevQty   = confirmed != null ? confirmed.physical_qty : null;
-    const prevStr   = prevQty !== null && prevQty !== undefined ? String(prevQty) : '';
+    /* User typed then deleted everything — abandon */
+    if (val === '') { dirtyInputs.delete(materialId); return; }
 
-    /* No change — clear dirty flag and bail */
-    if (val === prevStr || (val === '' && prevQty === null)) {
-      dirtyInputs.delete(materialId);
-      return;
-    }
+    /* Validate — integers only, positives or negatives both allowed */
+    const n = parseInt(val, 10);
+    if (isNaN(n)) { inputEl.style.borderColor = 'var(--bad)'; return; }
 
-    /* Validate */
-    if (val !== '') {
-      const n = parseInt(val, 10);
-      if (isNaN(n) || n < 0) { inputEl.style.borderColor = 'var(--bad)'; return; }
-    }
+    /* Adding zero changes nothing — skip silently */
+    if (n === 0) { dirtyInputs.delete(materialId); inputEl.value = ''; return; }
 
-    const newQty = val === '' ? null : parseInt(val, 10);
-    pendingEntry = { materialId, newQty, prevQty };
-    showConfirmModal(materialId, newQty);
+    const prevQty = counts[materialId] != null ? counts[materialId].physical_qty : null;
+    pendingEntry = { materialId, delta: n, prevQty };
+    showConfirmModal(materialId, n, prevQty);
   }
 
-  function showConfirmModal(materialId, newQty) {
+  function showConfirmModal(materialId, delta, prevQty) {
     const mat = MATERIALS.find(m => m.material_id === materialId);
     if (!mat) return;
 
-    const sap  = Number(mat.sap_qty);
-    const diff = newQty !== null ? newQty - sap : null;
+    const sap      = Number(mat.sap_qty);
+    const prev     = prevQty !== null && prevQty !== undefined ? prevQty : 0;
+    const newTotal = prev + delta;
+    const diff     = newTotal - sap;
 
     document.getElementById('cm-mat-id').textContent   = materialId;
     document.getElementById('cm-mat-desc').textContent = mat.description;
     document.getElementById('cm-sap').textContent      = sap.toLocaleString();
 
-    const countEl = document.getElementById('cm-count');
-    if (newQty !== null) {
-      countEl.textContent = newQty.toLocaleString();
-      countEl.className   = 'cm-val highlight';
-    } else {
-      countEl.textContent = 'Clear entry';
-      countEl.className   = 'cm-val muted';
-    }
+    /* Current total */
+    const prevEl = document.getElementById('cm-prev');
+    prevEl.textContent = prevQty !== null && prevQty !== undefined
+      ? prevQty.toLocaleString() : 'None';
 
+    /* This entry — show sign explicitly */
+    const countEl = document.getElementById('cm-count');
+    countEl.textContent = (delta > 0 ? '+' : '') + delta.toLocaleString();
+    countEl.className   = 'cm-val highlight ' + (delta < 0 ? 'bad' : '');
+
+    /* New total */
+    const totalEl = document.getElementById('cm-total');
+    totalEl.textContent = newTotal.toLocaleString();
+    totalEl.className   = 'cm-val ' + (diff === 0 ? 'ok' : 'bad');
+
+    /* Variance vs SAP */
     const varEl = document.getElementById('cm-var');
-    if (diff === null) {
-      varEl.textContent = '—';
-      varEl.className   = 'cm-val muted';
-    } else {
-      varEl.textContent = (diff >= 0 ? '+' : '') + diff.toLocaleString();
-      varEl.className   = 'cm-val ' + (diff === 0 ? 'ok' : 'bad');
-    }
+    varEl.textContent = (diff >= 0 ? '+' : '') + diff.toLocaleString();
+    varEl.className   = 'cm-val ' + (diff === 0 ? 'ok' : 'bad');
 
     const btn = document.getElementById('confirm-entry-btn');
     btn.disabled    = false;
-    btn.textContent = newQty !== null ? 'Confirm' : 'Confirm Clear';
+    btn.textContent = 'Confirm';
 
     document.getElementById('confirm-modal').style.display = 'flex';
   }
 
   function confirmEntry() {
     if (!pendingEntry) return;
-    const { materialId, newQty } = pendingEntry;
+    const { materialId, delta, prevQty } = pendingEntry;
     const btn = document.getElementById('confirm-entry-btn');
     btn.disabled = true;
 
-    if (newQty === null) {
-      delete counts[materialId];
-    } else {
-      counts[materialId] = {
-        material_id:  materialId,
-        physical_qty: newQty,
-        counted_by:   currentUser,
-        notes:        (counts[materialId] || {}).notes || '',
-        updated_at:   new Date().toISOString()
-      };
-    }
+    const prev     = prevQty !== null && prevQty !== undefined ? prevQty : 0;
+    const newTotal = prev + delta;
 
-    /* Snapshot now — don't let a realtime update change what we save */
-    const snapshot = counts[materialId] ? { ...counts[materialId] } : null;
+    counts[materialId] = {
+      material_id:  materialId,
+      physical_qty: newTotal,
+      counted_by:   currentUser,
+      notes:        (counts[materialId] || {}).notes || '',
+      updated_at:   new Date().toISOString()
+    };
 
-    /* Input is confirmed — no longer dirty */
+    const snapshot = { ...counts[materialId] };
     dirtyInputs.delete(materialId);
 
-    /* Sync input display to confirmed value */
     const cardInp  = document.querySelector(`#card-${materialId} .qty-input-card`);
     const tableInp = document.getElementById('tqty-' + materialId);
-    const display  = newQty !== null ? String(newQty) : '';
-    if (cardInp)  cardInp.value  = display;
-    if (tableInp) tableInp.value = display;
+    if (cardInp)  cardInp.value  = '';
+    if (tableInp) tableInp.value = '';
 
     updateRowDOM(materialId);
     if (activeTab === 'totals') renderTotals();
@@ -1282,12 +1284,10 @@
 
   function revertInput(materialId) {
     dirtyInputs.delete(materialId);
-    const prevQty = counts[materialId] != null ? counts[materialId].physical_qty : null;
-    const prevStr = prevQty !== null && prevQty !== undefined ? String(prevQty) : '';
     const cardInp  = document.querySelector(`#card-${materialId} .qty-input-card`);
     const tableInp = document.getElementById('tqty-' + materialId);
-    if (cardInp)  { cardInp.value  = prevStr; cardInp.style.borderColor  = ''; }
-    if (tableInp) { tableInp.value = prevStr; tableInp.style.borderColor = ''; }
+    if (cardInp)  { cardInp.value  = ''; cardInp.style.borderColor  = ''; }
+    if (tableInp) { tableInp.value = ''; tableInp.style.borderColor = ''; }
   }
 
   function onConfirmOverlayClick(e) {
@@ -1348,10 +1348,8 @@
       const rv = document.getElementById('rv-' + materialId);
       if (rv) { rv.textContent = text; rv.className = `row-var ${cls}`; }
       const qi = card.querySelector('.qty-input-card');
-      /* Never overwrite an input the user is currently editing */
-      if (qi && document.activeElement !== qi && !dirtyInputs.has(materialId)) {
-        qi.value = phys !== null ? phys : '';
-      }
+      /* Input is always blank unless the user is actively typing — never pre-fill */
+      if (qi && !dirtyInputs.has(materialId)) qi.value = '';
     }
     updateGroupHeader(getGroup(mat.description));
 
@@ -1366,9 +1364,7 @@
       const tts = document.getElementById('tts-'  + materialId);
       if (tts) tts.textContent = ts;
       const tqi = document.getElementById('tqty-' + materialId);
-      if (tqi && document.activeElement !== tqi && !dirtyInputs.has(materialId)) {
-        tqi.value = phys !== null ? phys : '';
-      }
+      if (tqi && !dirtyInputs.has(materialId)) tqi.value = '';
     }
 
     updateStats();
@@ -1480,9 +1476,9 @@
         <div class="row-meta">${id} &nbsp;·&nbsp; SAP ${Number(sap).toLocaleString()}</div>
       </div>
       <div class="row-right">
-        <input class="row-qty qty-input-card" type="number" inputmode="numeric" min="0" step="1"
-               placeholder="—"
-               value="${phys !== null ? phys : ''}"
+        <input class="row-qty qty-input-card" type="number" inputmode="decimal" step="1"
+               placeholder="0"
+               value=""
                oninput="dirtyInputs.add(${id})"
                onkeydown="onQtyKeydown(event,${id},this)"
                onblur="onQtyBlur(${id},this)" />
@@ -1513,8 +1509,8 @@
         <td><span class="t-desc">${escH(desc)}</span></td>
         <td class="r"><span class="t-sap">${Number(sap).toLocaleString()}</span></td>
         <td class="r">
-          <input class="t-qty" id="tqty-${id}" type="number" min="0" step="1" placeholder="—"
-                 value="${phys !== null ? phys : ''}"
+          <input class="t-qty" id="tqty-${id}" type="number" inputmode="decimal" step="1" placeholder="0"
+                 value=""
                  oninput="dirtyInputs.add(${id})"
                  onkeydown="onQtyKeydown(event,${id},this)"
                  onblur="onQtyBlur(${id},this)" />
