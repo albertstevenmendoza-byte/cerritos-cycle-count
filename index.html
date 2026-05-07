@@ -916,6 +916,7 @@
   let currentUser  = '';
   let activeFilter = 'all';
   let saveTimers   = {};
+  let dirtyInputs  = new Set(); // material IDs typed but not yet confirmed
   let activeTab    = 'count';
 
   /* ── Supabase ─────────────────────────────────────────── */
@@ -1116,22 +1117,23 @@
       });
   }
 
-  function scheduleSave(materialId) {
+  function scheduleSave(materialId, snapshot) {
     if (saveTimers[materialId]) clearTimeout(saveTimers[materialId]);
-    saveTimers[materialId] = setTimeout(() => saveRow(materialId), 700);
+    /* Pass snapshot directly so a realtime update landing in the
+       debounce window cannot overwrite what this user just confirmed */
+    saveTimers[materialId] = setTimeout(() => saveRow(materialId, snapshot), 700);
   }
 
-  async function saveRow(materialId) {
+  async function saveRow(materialId, snapshot) {
     setConnStatus('saving');
-    const c = counts[materialId];
     try {
-      if (!c) {
+      if (!snapshot) {
         const { error } = await db.from(CNT_TABLE).delete().eq('material_id', materialId);
         if (error) throw error;
       } else {
         const { error } = await db.from(CNT_TABLE).upsert({
-          material_id: materialId, physical_qty: c.physical_qty,
-          counted_by: c.counted_by, notes: c.notes || '',
+          material_id: materialId, physical_qty: snapshot.physical_qty,
+          counted_by: snapshot.counted_by, notes: snapshot.notes || '',
           updated_at: new Date().toISOString()
         }, { onConflict: 'material_id' });
         if (error) throw error;
@@ -1165,25 +1167,29 @@
   }
 
   function onQtyBlur(materialId, inputEl) {
-    /* Don't re-trigger while confirm modal is already open */
+    /* If there's already a pending confirmation (any material), don't stack another */
+    if (pendingEntry) return;
     if (document.getElementById('confirm-modal').style.display !== 'none') return;
 
-    const val    = inputEl.value.trim();
-    const prevQty = counts[materialId] != null ? counts[materialId].physical_qty : null;
-    const prevStr = prevQty !== null && prevQty !== undefined ? String(prevQty) : '';
+    const val = inputEl.value.trim();
+    inputEl.style.borderColor = '';
 
-    /* Nothing changed — ignore */
-    if (val === prevStr || (val === '' && prevQty === null)) return;
+    /* Compare against current confirmed/synced value — not optimistic local state */
+    const confirmed = counts[materialId];
+    const prevQty   = confirmed != null ? confirmed.physical_qty : null;
+    const prevStr   = prevQty !== null && prevQty !== undefined ? String(prevQty) : '';
+
+    /* No change — clear dirty flag and bail */
+    if (val === prevStr || (val === '' && prevQty === null)) {
+      dirtyInputs.delete(materialId);
+      return;
+    }
 
     /* Validate */
     if (val !== '') {
       const n = parseInt(val, 10);
-      if (isNaN(n) || n < 0) {
-        inputEl.style.borderColor = 'var(--bad)';
-        return;
-      }
+      if (isNaN(n) || n < 0) { inputEl.style.borderColor = 'var(--bad)'; return; }
     }
-    inputEl.style.borderColor = '';
 
     const newQty = val === '' ? null : parseInt(val, 10);
     pendingEntry = { materialId, newQty, prevQty };
@@ -1244,7 +1250,13 @@
       };
     }
 
-    /* Update input to show confirmed value */
+    /* Snapshot now — don't let a realtime update change what we save */
+    const snapshot = counts[materialId] ? { ...counts[materialId] } : null;
+
+    /* Input is confirmed — no longer dirty */
+    dirtyInputs.delete(materialId);
+
+    /* Sync input display to confirmed value */
     const cardInp  = document.querySelector(`#card-${materialId} .qty-input-card`);
     const tableInp = document.getElementById('tqty-' + materialId);
     const display  = newQty !== null ? String(newQty) : '';
@@ -1253,7 +1265,7 @@
 
     updateRowDOM(materialId);
     if (activeTab === 'totals') renderTotals();
-    scheduleSave(materialId);
+    scheduleSave(materialId, snapshot);
 
     pendingEntry = null;
     document.getElementById('confirm-modal').style.display = 'none';
@@ -1261,6 +1273,7 @@
 
   function cancelEntry() {
     if (pendingEntry) {
+      dirtyInputs.delete(pendingEntry.materialId);
       revertInput(pendingEntry.materialId);
       pendingEntry = null;
     }
@@ -1268,6 +1281,7 @@
   }
 
   function revertInput(materialId) {
+    dirtyInputs.delete(materialId);
     const prevQty = counts[materialId] != null ? counts[materialId].physical_qty : null;
     const prevStr = prevQty !== null && prevQty !== undefined ? String(prevQty) : '';
     const cardInp  = document.querySelector(`#card-${materialId} .qty-input-card`);
@@ -1334,7 +1348,10 @@
       const rv = document.getElementById('rv-' + materialId);
       if (rv) { rv.textContent = text; rv.className = `row-var ${cls}`; }
       const qi = card.querySelector('.qty-input-card');
-      if (qi && document.activeElement !== qi) qi.value = phys !== null ? phys : '';
+      /* Never overwrite an input the user is currently editing */
+      if (qi && document.activeElement !== qi && !dirtyInputs.has(materialId)) {
+        qi.value = phys !== null ? phys : '';
+      }
     }
     updateGroupHeader(getGroup(mat.description));
 
@@ -1349,7 +1366,9 @@
       const tts = document.getElementById('tts-'  + materialId);
       if (tts) tts.textContent = ts;
       const tqi = document.getElementById('tqty-' + materialId);
-      if (tqi && document.activeElement !== tqi) tqi.value = phys !== null ? phys : '';
+      if (tqi && document.activeElement !== tqi && !dirtyInputs.has(materialId)) {
+        tqi.value = phys !== null ? phys : '';
+      }
     }
 
     updateStats();
@@ -1464,6 +1483,7 @@
         <input class="row-qty qty-input-card" type="number" inputmode="numeric" min="0" step="1"
                placeholder="—"
                value="${phys !== null ? phys : ''}"
+               oninput="dirtyInputs.add(${id})"
                onkeydown="onQtyKeydown(event,${id},this)"
                onblur="onQtyBlur(${id},this)" />
         <span class="row-var ${cls}" id="rv-${id}">${text}</span>
@@ -1495,6 +1515,7 @@
         <td class="r">
           <input class="t-qty" id="tqty-${id}" type="number" min="0" step="1" placeholder="—"
                  value="${phys !== null ? phys : ''}"
+                 oninput="dirtyInputs.add(${id})"
                  onkeydown="onQtyKeydown(event,${id},this)"
                  onblur="onQtyBlur(${id},this)" />
         </td>
