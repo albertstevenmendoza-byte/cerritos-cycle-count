@@ -539,7 +539,7 @@ input::placeholder{color:var(--ink-3)}
         <button class="mode-opt active" id="mode-add">+ Add</button>
         <button class="mode-opt" id="mode-set">= Set</button>
       </div>
-      <span class="mode-hint" id="mode-hint-text">Adds to running total</span>
+      <span class="mode-hint" id="mode-hint-text">Adds to total &middot; use negative to subtract</span>
     </div>
     <div class="groups-container" id="groups-container"></div>
     <div class="desktop-table-wrap">
@@ -837,7 +837,7 @@ function setMode(mode) {
   entryMode=mode;
   document.getElementById('mode-add').classList.toggle('active',mode==='add');
   document.getElementById('mode-set').classList.toggle('active',mode==='set');
-  document.getElementById('mode-hint-text').textContent=mode==='add'?'Adds to running total':'Replaces current count';
+  document.getElementById('mode-hint-text').textContent=mode==='add'?'Adds to total \u00b7 use negative to subtract':'Replaces current count';
   document.querySelectorAll('.qty-input-card,.t-qty').forEach(inp=>inp.classList.toggle('mode-set',mode==='set'));
   showToast(mode==='add'?'+ Add mode: values add to total':'= Set mode: values replace total');
 }
@@ -914,7 +914,9 @@ function onQtyBlur(materialId, inputEl) {
   if (document.getElementById('confirm-modal').style.display!=='none') return;
   const val=inputEl.value.trim();
   inputEl.style.borderColor='';
-  if (val==='') { dirtyInputs.delete(materialId); return; }
+  if (val===''||val==='-') { dirtyInputs.delete(materialId); inputEl.value=''; return; }
+  /* Accept optional leading minus then digits only */
+  if (!/^-?\d+$/.test(val)) { inputEl.style.borderColor='var(--bad)'; showToast('Enter a whole number (e.g. 12 or -5)'); return; }
   const n=parseInt(val,10);
   if (isNaN(n)) { inputEl.style.borderColor='var(--bad)'; return; }
   if (entryMode==='add'&&n===0) { dirtyInputs.delete(materialId); inputEl.value=''; return; }
@@ -1115,8 +1117,8 @@ function renderGroups() {
     <div id="chip-${id}">${buildChip(phys,sap)}</div>
   </div>
   <div class="row-right">
-    <input class="row-qty qty-input-card${mc}" type="number" inputmode="decimal" step="1"
-           placeholder="${entryMode==='set'?'= qty':'+ qty'}" value=""
+    <input class="row-qty qty-input-card${mc}" type="text" inputmode="decimal"
+           placeholder="${entryMode==='set'?'= qty':'±  qty'}" value=""
            oninput="dirtyInputs.add(${id})"
            onkeydown="onQtyKeydown(event,${id},this)"
            onblur="onQtyBlur(${id},this)" />
@@ -1148,8 +1150,8 @@ function renderTable() {
   <td><span class="t-desc">${escH(desc)}</span></td>
   <td class="r"><span class="t-sap">${Number(sap).toLocaleString()}</span></td>
   <td class="r"><span class="t-phys" id="tphy-${id}">${phys!=null?Number(phys).toLocaleString():'\u2014'}</span></td>
-  <td class="r"><input class="row-qty t-qty${mc}" id="tqty-${id}" type="number" inputmode="decimal" step="1"
-    placeholder="${entryMode==='set'?'= qty':'+ qty'}" value=""
+  <td class="r"><input class="row-qty t-qty${mc}" id="tqty-${id}" type="text" inputmode="decimal"
+    placeholder="${entryMode==='set'?'= qty':'±  qty'}" value=""
     oninput="dirtyInputs.add(${id})"
     onkeydown="onQtyKeydown(event,${id},this)"
     onblur="onQtyBlur(${id},this)" /></td>
