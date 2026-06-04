@@ -240,15 +240,15 @@ input::placeholder{color:var(--ink-3)}
 .row-total-chip.chip-bad{background:var(--bad-bg);color:var(--bad);border-color:var(--bad-line)}
 .row-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0}
 .qty-row{display:flex;align-items:center;gap:5px}
-.sign-btn{width:32px;height:38px;background:var(--surface-2);border:1.5px solid var(--line-med);
-  border-radius:var(--r);font-size:18px;font-weight:700;color:var(--ink-2);
+.sign-btn{width:38px;height:38px;background:var(--surface-2);border:1.5px solid var(--line-med);
+  border-radius:var(--r);font-size:22px;font-weight:400;color:var(--ink-2);
   display:flex;align-items:center;justify-content:center;cursor:pointer;
   flex-shrink:0;-webkit-tap-highlight-color:transparent;
-  transition:background .12s,color .12s,border-color .12s;
-  font-family:var(--mono);line-height:1;user-select:none}
-.sign-btn:active{background:var(--bad-bg);border-color:var(--bad-line);color:var(--bad)}
-.sign-btn.is-neg{background:var(--bad-bg);border-color:var(--bad-line);color:var(--bad)}
-.row-qty{width:88px;height:38px;padding:0 10px;text-align:right;
+  transition:background .15s,color .15s,border-color .15s,transform .1s;
+  font-family:var(--mono);line-height:1;user-select:none;touch-action:manipulation}
+.sign-btn:active{transform:scale(.92)}
+.sign-btn.is-neg{background:var(--bad-bg);border-color:var(--bad-line);color:var(--bad);font-size:26px;font-weight:700}
+.row-qty{width:80px;height:38px;padding:0 10px;text-align:right;
   font-family:var(--mono);font-size:15px;font-weight:600;
   background:var(--surface-2);border:1.5px solid var(--line-med);border-radius:var(--r);
   color:var(--ink);-webkit-appearance:none;appearance:none;outline:none;
@@ -935,7 +935,7 @@ function onQtyBlur(materialId, inputEl) {
   if (document.getElementById('confirm-modal').style.display!=='none') return;
   const val=inputEl.value.trim();
   inputEl.style.borderColor='';
-  if (val===''||val==='-') { dirtyInputs.delete(materialId); inputEl.value=''; return; }
+  if (val===''||val==='-') { dirtyInputs.delete(materialId); inputEl.value=''; const sb=document.getElementById('sign-'+materialId); if(sb) sb.classList.remove('is-neg'); return; }
   /* Accept optional leading minus then digits only */
   if (!/^-?\d+$/.test(val)) { inputEl.style.borderColor='var(--bad)'; showToast('Enter a whole number (e.g. 12 or -5)'); return; }
   const n=parseInt(val,10);
@@ -1009,22 +1009,32 @@ function revertInput(materialId) {
   if (sb) sb.classList.remove('is-neg');
 }
 
-/* Toggle sign button: flips the input between positive and negative */
+/* toggleSign — tap BEFORE or AFTER typing digits to flip sign.
+   The button arms "-" mode: if input is empty it pre-fills "-" so the
+   very next digit the user types becomes negative. */
 function toggleSign(materialId) {
   const inp = document.querySelector(`#card-${materialId} .qty-input-card`);
   const btn = document.getElementById('sign-' + materialId);
   if (!inp) return;
+
   const raw = inp.value.trim();
   if (raw === '' || raw === '-') {
-    /* Nothing typed yet — just arm the negative state visually */
+    /* Nothing typed yet — pre-arm: show "-" in the field */
     inp.value = raw === '-' ? '' : '-';
   } else {
-    const n = parseFloat(raw);
-    if (!isNaN(n)) inp.value = n > 0 ? String(-n) : String(Math.abs(n));
+    /* Already has digits — flip sign */
+    const digits = raw.replace(/^-/, '');
+    inp.value = raw.startsWith('-') ? digits : '-' + digits;
   }
-  if (btn) btn.classList.toggle('is-neg', inp.value.startsWith('-'));
+
+  const isNeg = inp.value.startsWith('-');
+  if (btn) btn.classList.toggle('is-neg', isNeg);
   dirtyInputs.add(materialId);
+
+  /* Put cursor at end so typing digits appends naturally */
   inp.focus();
+  const len = inp.value.length;
+  try { inp.setSelectionRange(len, len); } catch(e) {}
 }
 
 /* Keep sign button state in sync as user types */
