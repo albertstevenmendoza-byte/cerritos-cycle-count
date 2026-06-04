@@ -822,6 +822,7 @@ async function checkExistingMaterials() {
   showMatStatus('loading','Checking for existing session\u2026','');
   try {
     const {data,error}=await db.from(MAT_TABLE).select('material_id,description,sap_qty,uploaded_by,uploaded_at').order('material_id');
+    console.log('checkExistingMaterials response:', {data, error});
     if (error) throw error;
     if (data&&data.length) {
       MATERIALS=data;
@@ -833,7 +834,8 @@ async function checkExistingMaterials() {
       document.getElementById('mat-refresh-btn').style.display='block';
     }
   } catch(err) {
-    showMatStatus('error','Connection error','Check network or Supabase config.');
+    console.error('checkExistingMaterials error:', err);
+    showMatStatus('error','Connection error', err?.message || 'Check network or Supabase config.');
   }
   evaluateStartBtn();
 }
@@ -866,7 +868,7 @@ async function uploadMaterials(rows) {
       if (error) throw error;
     }
     showToast(`${rows.length} materials uploaded`);
-  } catch(err) { console.error('Upload error:',err); showToast('Upload failed \u2014 check console'); }
+  } catch(err) { console.error('Upload error:',err); showToast('Upload failed: ' + (err?.message||err)); }
 }
 
 function goBack() {
