@@ -343,6 +343,30 @@ input::placeholder{color:var(--ink-3)}
 .k-confirm:disabled{background:var(--surface-3);color:var(--ink-3);cursor:not-allowed}
 .calc-mode-note{text-align:center;font-size:11px;color:var(--ink-3);
   padding:.1rem 1rem .75rem;font-family:var(--mono)}
+/* ── Financial summary (Totals tab) ───────────────────────── */
+.fin-summary{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+.fin-heading{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;border-bottom:1px solid var(--line)}
+.fin-coverage{font-size:11px;color:var(--ink-3);font-family:var(--mono);background:var(--surface-2);border:1px solid var(--line);border-radius:99px;padding:2px 8px}
+.fin-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)}
+@media(min-width:600px){.fin-grid{grid-template-columns:1fr 1fr 1fr}}
+.fin-card{background:var(--surface);padding:.85rem 1rem}
+.fin-card-wide{grid-column:1/-1}
+@media(min-width:600px){.fin-card-wide{grid-column:auto}}
+.fin-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:4px}
+.fin-val{font-size:18px;font-weight:700;font-family:var(--mono);color:var(--ink);line-height:1.2}
+.fin-val-large{font-size:22px}
+.fin-val.fin-ok,.fin-val-large.fin-ok{color:var(--ok)}
+.fin-val.fin-bad,.fin-val-large.fin-bad{color:var(--bad)}
+.fin-sub{font-size:11px;color:var(--ink-3);margin-top:3px;font-family:var(--mono)}
+.fin-sub-row{display:flex;gap:12px;margin-top:5px;flex-wrap:wrap}
+.fin-bucket{font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px}
+.fin-bucket-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.fin-bucket.over{color:var(--ok)}.fin-bucket-dot.over{background:var(--ok)}
+.fin-bucket.short{color:var(--bad)}.fin-bucket-dot.short{background:var(--bad)}
+.ri-dollar{font-family:var(--mono);font-size:13px;font-weight:700;text-align:right;grid-row:1;align-self:center}
+.ri-dollar-pos{color:var(--ok)}.ri-dollar-neg{color:var(--bad)}.ri-dollar-na{color:var(--ink-3);font-weight:400;font-size:12px}
+.result-item{display:grid;grid-template-columns:1fr auto;gap:.2rem .75rem;padding:.65rem .9rem;border-bottom:1px solid var(--line);align-items:start}
+.result-item:last-child{border-bottom:none}
   </style>
 </head>
 <body>
@@ -1105,79 +1129,11 @@ function renderTable() {
 }
 
 /* ─── Totals ──────────────────────────────────────────────── */
-function renderTotals() {
-  var total=MATERIALS.length, counted=Object.keys(counts).length;
-  var remain=total-counted, pct=total?Math.round(counted/total*100):0, allDone=remain===0&&total>0;
-  var totalSAP=0, totalPhys=0, withVar=[], uncounted=[];
-  MATERIALS.forEach(function(m) {
-    var c=counts[m.material_id];
-    if (c&&c.physical_qty!=null) {
-      totalSAP+=Number(m.sap_qty); totalPhys+=c.physical_qty;
-      if (c.physical_qty!==Number(m.sap_qty)) withVar.push({id:m.material_id,desc:m.description,sap:Number(m.sap_qty),phys:c.physical_qty,diff:c.physical_qty-Number(m.sap_qty)});
-    } else { uncounted.push({id:m.material_id,desc:m.description,sap:Number(m.sap_qty)}); }
-  });
-  withVar.sort(function(a,b){ return Math.abs(b.diff)-Math.abs(a.diff); });
-  var netVar=totalPhys-totalSAP, netCls=netVar===0?'':netVar>0?' ok':' bad';
-  var netTxt=(netVar>=0?'+':'')+netVar.toLocaleString();
-
-  var gbHtml='';
-  GROUP_ORDER.forEach(function(name) {
-    var mats=MATERIALS.filter(function(m){ return getGroup(m.description)===name; }); if(!mats.length) return;
-    var cnt=mats.filter(function(m){ return counts[m.material_id]!=null; }).length, tot=mats.length;
-    var pctG=tot?Math.round(cnt/tot*100):0, gSAP=0, gPhys=0;
-    mats.forEach(function(m){ var c=counts[m.material_id]; if(c&&c.physical_qty!=null){gSAP+=Number(m.sap_qty);gPhys+=c.physical_qty;} });
-    var gDiff=gPhys-gSAP, gVarCls=cnt===0?'none':gDiff===0?'pos':gDiff>0?'pos':'neg';
-    var gVarTxt=cnt===0?'\u2014':(gDiff>=0?'+':'')+gDiff.toLocaleString();
-    gbHtml+='<div class="gb-row"><span class="gb-icon">'+GROUP_ICONS[name]+'</span><span class="gb-name">'+name+'</span>'
-           +'<div class="gb-bar-wrap"><div class="gb-bar'+(cnt===tot&&tot>0?' done':'')+'" style="width:'+pctG+'%"></div></div>'
-           +'<span class="gb-frac">'+cnt+'/'+tot+'</span><span class="gb-var '+gVarCls+'">'+gVarTxt+'</span></div>';
-  });
-
-  var html = '<div class="progress-card"><div class="card-heading">Progress</div>'
-    +'<div class="progress-bar-track"><div class="progress-bar-fill'+(allDone?' done-fill':'')+'" style="width:'+pct+'%"></div></div>'
-    +'<div class="progress-nums">'
-    +'<div class="prog-num"><span class="prog-num-val green">'+counted+'</span><span class="prog-num-label">Counted</span></div>'
-    +'<div class="prog-num"><span class="prog-num-val gold">'+remain+'</span><span class="prog-num-label">Remaining</span></div>'
-    +'<div class="prog-num"><span class="prog-num-val muted">'+pct+'%</span><span class="prog-num-label">Complete</span></div>'
-    +'</div></div>'
-    +'<div class="summary-grid">'
-    +'<div class="sum-card"><div class="sum-label">SAP Total</div><div class="sum-val">'+totalSAP.toLocaleString()+'</div></div>'
-    +'<div class="sum-card"><div class="sum-label">Physical</div><div class="sum-val">'+totalPhys.toLocaleString()+'</div></div>'
-    +'<div class="sum-card"><div class="sum-label">Net Variance</div><div class="sum-val'+netCls+'">'+netTxt+'</div></div>'
-    +'<div class="sum-card"><div class="sum-label">Items w/ Var.</div><div class="sum-val'+(withVar.length?' bad':' ok')+'">'+withVar.length+'</div></div>'
-    +'</div>'
-    +'<div class="group-breakdown"><div style="padding:.6rem 1rem;border-bottom:1px solid var(--line)"><span class="card-heading" style="margin:0">By Group</span></div>'+gbHtml+'</div>';
-
-  html += '<div><div class="section-heading">Variance <span class="section-pill'+(withVar.length?' bad':'')+'">'+withVar.length+'</span></div>';
-  if (withVar.length) {
-    html += '<div class="result-list">';
-    withVar.forEach(function(x){
-      html+='<div class="result-item"><div class="ri-desc">'+esc(x.desc)+'</div>'
-           +'<div class="ri-var '+(x.diff>0?'pos':'neg')+'">'+(x.diff>0?'+':'')+x.diff.toLocaleString()+'</div>'
-           +'<div class="ri-qtys ri-id">'+x.id+' &middot; SAP '+x.sap.toLocaleString()+' &rarr; '+x.phys.toLocaleString()+'</div></div>';
-    });
-    html += '</div>';
-  } else { html+='<div class="result-list"><div class="empty-section">'+(counted?'No variances \u2014 all match SAP \u2713':'No items counted yet.')+'</div></div>'; }
-  html += '</div>';
-
-  html += '<div><div class="section-heading">Uncounted <span class="section-pill">'+uncounted.length+'</span></div>';
-  if (uncounted.length) {
-    html += '<div class="result-list">';
-    uncounted.forEach(function(x){
-      html+='<div class="result-item"><div class="ri-desc">'+esc(x.desc)+'</div><div class="ri-sap">'+x.sap.toLocaleString()+'</div><div class="ri-id">'+x.id+'</div></div>';
-    });
-    html += '</div>';
-  } else { html+='<div class="result-list"><div class="empty-section">All counted \u2713</div></div>'; }
-  html += '</div>';
-
-  document.getElementById('totals-content').innerHTML = html;
-}
-
-/* ─── Filters ─────────────────────────────────────────────── */
+/* ─── Filters & stats ─────────────────────────────────────── */
 function updateFilterCounts() {
   var all=MATERIALS.length, unc=0, cnt=0, vrn=0;
   MATERIALS.forEach(function(m){
-    var c=counts[m.material_id], phys=c?c.physical_qty:null;
+    var cc=counts[m.material_id], phys=cc?cc.physical_qty:null;
     if (phys==null) unc++;
     else { cnt++; if(phys!==Number(m.sap_qty)) vrn++; }
   });
@@ -1187,15 +1143,14 @@ function updateFilterCounts() {
 
 function updateVarianceBadge() {
   var v=0;
-  MATERIALS.forEach(function(m){ var c=counts[m.material_id]; if(c&&c.physical_qty!=null&&c.physical_qty!==Number(m.sap_qty)) v++; });
+  MATERIALS.forEach(function(m){ var cc=counts[m.material_id]; if(cc&&cc.physical_qty!=null&&cc.physical_qty!==Number(m.sap_qty)) v++; });
   var b=document.getElementById('var-badge'); if(b){b.textContent=v;b.classList.toggle('hidden',v===0);}
 }
 
 function updateLastSync() {
   var t='Synced '+new Date().toLocaleTimeString();
-  ['rc-mobile','ls-mobile','ls-desktop'].forEach(function(id){ var el=document.getElementById(id); if(el&&id.startsWith('ls')) el.textContent=t; });
-  var rd=document.getElementById('ls-desktop'); if(rd) rd.textContent=t;
   var rm=document.getElementById('ls-mobile');  if(rm) rm.textContent=t;
+  var rd=document.getElementById('ls-desktop'); if(rd) rd.textContent=t;
 }
 
 function setFilter(btn) {
@@ -1210,22 +1165,22 @@ function applyFilters() {
   var visible=0, gv={};
   GROUP_ORDER.forEach(function(g){ gv[g]=0; });
   MATERIALS.forEach(function(m) {
-    var c=counts[m.material_id], phys=c?c.physical_qty:null;
+    var cc=counts[m.material_id], phys=cc?cc.physical_qty:null;
     var pass=true;
     if (activeFilter==='uncounted') pass=phys==null;
     else if (activeFilter==='counted')  pass=phys!=null;
     else if (activeFilter==='variance') pass=phys!=null&&phys!==Number(m.sap_qty);
     if (pass&&ql) pass=String(m.material_id).includes(ql)||m.description.toLowerCase().includes(ql);
     var show=pass?'':'none';
-    var card=document.getElementById('card-'+m.material_id);    if(card) card.style.display=show;
-    var row=document.getElementById('row-'+m.material_id);      if(row)  row.style.display=show;
-    /* notes drawer is inside mat-row — hides automatically */
+    var card=document.getElementById('card-'+m.material_id); if(card) card.style.display=show;
+    var row=document.getElementById('row-'+m.material_id);   if(row)  row.style.display=show;
+    var nd=document.getElementById('nd-'+m.material_id);     if(nd)   nd.style.display=show;
     if(pass){ visible++; gv[getGroup(m.description)]++; }
   });
   GROUP_ORDER.forEach(function(name){ var g=document.getElementById('grp-'+name); if(g) g.style.display=gv[name]>0?'':'none'; });
   var lbl=visible+' of '+MATERIALS.length;
-  var rm=document.getElementById('rc-mobile');   if(rm) rm.textContent=lbl;
-  var rd=document.getElementById('rc-desktop');  if(rd) rd.textContent=lbl;
+  var rm=document.getElementById('rc-mobile');  if(rm) rm.textContent=lbl;
+  var rd=document.getElementById('rc-desktop'); if(rd) rd.textContent=lbl;
 }
 
 /* ─── Mode / subtract ─────────────────────────────────────── */
@@ -1260,10 +1215,10 @@ function switchTab(name) {
 function exportCSV() {
   var rows=[['Material','Description','SAP Qty','Physical Qty','Variance','Counted By','Notes','Timestamp'].join(',')];
   MATERIALS.forEach(function(m) {
-    var c=counts[m.material_id], phys=(c&&c.physical_qty!=null)?c.physical_qty:'', diff=phys!==''?phys-m.sap_qty:'';
+    var cc=counts[m.material_id], phys=(cc&&cc.physical_qty!=null)?cc.physical_qty:'', diff=phys!==''?phys-m.sap_qty:'';
     rows.push([m.material_id,'"'+String(m.description).replace(/"/g,'""')+'"',m.sap_qty,phys,diff,
-      '"'+(c?c.counted_by||'':'')+'"','"'+(c?String(c.notes||'').replace(/"/g,'""'):'')+'"',
-      '"'+(c&&c.updated_at?new Date(c.updated_at).toLocaleString():'')+'"'].join(','));
+      '"'+(cc?cc.counted_by||'':'')+'"','"'+(cc?String(cc.notes||'').replace(/"/g,'""'):'')+'"',
+      '"'+(cc&&cc.updated_at?new Date(cc.updated_at).toLocaleString():'')+'"'].join(','));
   });
   var url=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8;'}));
   var a=Object.assign(document.createElement('a'),{href:url,download:'cerritos_count_'+new Date().toISOString().slice(0,10)+'.csv'});
@@ -1310,14 +1265,268 @@ function evaluateStartBtn() {
   startBtn.disabled = !(nameInput.value.trim() && (MATERIALS.length || parsedRows));
 }
 
-/* ─── Photo store (localStorage) ───────────────────────── */
-var photoStore = {};
-(function(){
-  try { var ps=localStorage.getItem('cerritos_photos'); if(ps) photoStore=JSON.parse(ps); } catch(e){}
-})();
+function goBack() {
+  document.getElementById('setup-screen').style.display='flex';
+  document.getElementById('app').style.display='none';
+  var ni=document.getElementById('setup-name'); ni.value='';
+  document.getElementById('start-btn').disabled=true;
+  MATERIALS=[]; counts={};
+  loadMaterials();
+}
 
-function savePhotoStore() {
-  try { localStorage.setItem('cerritos_photos', JSON.stringify(photoStore)); } catch(e){}
+/* ─── Clear all ───────────────────────────────────────────── */
+function showClearModal() {
+  var b=document.getElementById('btn-confirm-clear'); b.disabled=false; b.textContent='Clear everything';
+  document.getElementById('clear-modal').style.display='flex';
+}
+function hideClearModal() { document.getElementById('clear-modal').style.display='none'; }
+
+async function clearAllData() {
+  var btn=document.getElementById('btn-confirm-clear');
+  btn.disabled=true; btn.textContent='Clearing\u2026';
+  try {
+    var r1=await db.from(CNT_TABLE).delete().not('material_id','is',null); if(r1.error) throw r1.error;
+    var r2=await db.from(MAT_TABLE).delete().not('material_id','is',null); if(r2.error) throw r2.error;
+    counts={}; MATERIALS=[];
+    hideClearModal();
+    showToast('Cleared \u2014 ready for new session');
+    setTimeout(goBack, 1200);
+  } catch(err) {
+    console.error('clearAllData error:', err);
+    btn.disabled=false; btn.textContent='Clear everything';
+    showToast('Clear failed: '+(err.message||String(err)));
+  }
+}
+
+
+function renderTotals() {
+  var total=MATERIALS.length, counted=Object.keys(counts).length;
+  var remain=total-counted, pct=total?Math.round(counted/total*100):0, allDone=remain===0&&total>0;
+
+  /* ── Aggregate data ── */
+  var totalSAP=0, totalPhys=0, withVar=[], uncounted=[];
+  var totalCostSAP=0, totalCostPhys=0, coveredCount=0;
+
+  MATERIALS.forEach(function(m) {
+    var c=counts[m.material_id];
+    var sap=Number(m.sap_qty);
+    var cost=COST_MAP[m.material_id]||0;
+    if (c&&c.physical_qty!=null) {
+      totalSAP  += sap;
+      totalPhys += c.physical_qty;
+      if (cost>0) {
+        totalCostSAP  += sap * cost;
+        totalCostPhys += c.physical_qty * cost;
+        coveredCount++;
+      }
+      if (c.physical_qty !== sap) {
+        withVar.push({
+          id:m.material_id, desc:m.description,
+          sap:sap, phys:c.physical_qty,
+          diff:c.physical_qty-sap,
+          cost:cost,
+          dollarImpact:cost>0 ? (c.physical_qty-sap)*cost : null
+        });
+      }
+    } else {
+      uncounted.push({id:m.material_id, desc:m.description, sap:sap, cost:cost});
+    }
+  });
+
+  withVar.sort(function(a,b){
+    var ai=a.dollarImpact!=null?Math.abs(a.dollarImpact):0;
+    var bi=b.dollarImpact!=null?Math.abs(b.dollarImpact):0;
+    return bi-ai;
+  });
+
+  var netVar     = totalPhys-totalSAP;
+  var netCls     = netVar===0?'':netVar>0?' ok':' bad';
+  var netTxt     = (netVar>=0?'+':'')+netVar.toLocaleString();
+  var netCost    = totalCostPhys-totalCostSAP;
+  var netCostCls = netCost===0?'':netCost>0?' ok':' bad';
+  var netCostTxt = (netCost>=0?'+$':'-$')+Math.abs(netCost).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+  var coverPct   = counted>0 ? Math.round(coveredCount/counted*100) : 0;
+
+  /* Variance buckets */
+  var overItems   = withVar.filter(function(x){return x.diff>0;});
+  var shortItems  = withVar.filter(function(x){return x.diff<0;});
+  var overCost    = overItems.reduce(function(s,x){return s+(x.dollarImpact||0);},0);
+  var shortCost   = shortItems.reduce(function(s,x){return s+(x.dollarImpact||0);},0);
+  var costWithVar = withVar.filter(function(x){return x.dollarImpact!=null;});
+
+  function fmt$(n){ return (n>=0?'+$':'-$')+Math.abs(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function fmtUSD(n){ return '$'+n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+  /* ── HTML ── */
+  var html = '';
+
+  /* Progress */
+  html += '<div class="progress-card">'
+    +'<div class="card-heading">Session Progress</div>'
+    +'<div class="progress-bar-track"><div class="progress-bar-fill'+(allDone?' done-fill':'')+'" style="width:'+pct+'%"></div></div>'
+    +'<div class="progress-nums">'
+    +'<div class="prog-num"><span class="prog-num-val green">'+counted+'</span><span class="prog-num-label">Counted</span></div>'
+    +'<div class="prog-num"><span class="prog-num-val gold">'+remain+'</span><span class="prog-num-label">Remaining</span></div>'
+    +'<div class="prog-num"><span class="prog-num-val muted">'+pct+'%</span><span class="prog-num-label">Complete</span></div>'
+    +'</div></div>';
+
+  /* Financial summary */
+  html += '<div class="fin-summary">'
+    +'<div class="fin-heading"><span class="card-heading" style="margin:0">Financial Summary</span>'
+    +'<span class="fin-coverage">'+coverPct+'% cost coverage</span></div>'
+    +'<div class="fin-grid">'
+    +'<div class="fin-card">'
+    +'<div class="fin-label">SAP Inventory Value</div>'
+    +'<div class="fin-val">'+fmtUSD(totalCostSAP)+'</div>'
+    +'<div class="fin-sub">'+totalSAP.toLocaleString()+' units on book</div>'
+    +'</div>'
+    +'<div class="fin-card">'
+    +'<div class="fin-label">Physical Inventory Value</div>'
+    +'<div class="fin-val">'+fmtUSD(totalCostPhys)+'</div>'
+    +'<div class="fin-sub">'+totalPhys.toLocaleString()+' units counted</div>'
+    +'</div>'
+    +'<div class="fin-card fin-card-wide">'
+    +'<div class="fin-label">Net Dollar Variance</div>'
+    +'<div class="fin-val fin-val-large'+(netCost>0?' fin-ok':netCost<0?' fin-bad':'')+'">'+netCostTxt+'</div>'
+    +'<div class="fin-sub-row">'
+    +'<span class="fin-bucket over"><span class="fin-bucket-dot over"></span>Over: +'+fmtUSD(overCost)+'</span>'
+    +'<span class="fin-bucket short"><span class="fin-bucket-dot short"></span>Short: '+fmtUSD(shortCost)+'</span>'
+    +'</div>'
+    +'</div>'
+    +'</div></div>';
+
+  /* Unit summary grid */
+  html += '<div class="summary-grid">'
+    +'<div class="sum-card"><div class="sum-label">SAP Units</div><div class="sum-val">'+totalSAP.toLocaleString()+'</div></div>'
+    +'<div class="sum-card"><div class="sum-label">Physical Units</div><div class="sum-val">'+totalPhys.toLocaleString()+'</div></div>'
+    +'<div class="sum-card"><div class="sum-label">Unit Variance</div><div class="sum-val'+netCls+'">'+netTxt+'</div></div>'
+    +'<div class="sum-card"><div class="sum-label">Items w/ Variance</div><div class="sum-val'+(withVar.length?' bad':' ok')+'">'+withVar.length+'</div></div>'
+    +'</div>';
+
+  /* Group breakdown */
+  var gbHtml='';
+  GROUP_ORDER.forEach(function(name) {
+    var mats=MATERIALS.filter(function(m){return getGroup(m.description)===name;}); if(!mats.length) return;
+    var cnt=mats.filter(function(m){return counts[m.material_id]!=null;}).length, tot=mats.length;
+    var pctG=tot?Math.round(cnt/tot*100):0, gSAP=0, gPhys=0, gCostVar=0;
+    mats.forEach(function(m){
+      var cc=counts[m.material_id], cost=COST_MAP[m.material_id]||0;
+      if(cc&&cc.physical_qty!=null){
+        gSAP+=Number(m.sap_qty); gPhys+=cc.physical_qty;
+        gCostVar+=(cc.physical_qty-Number(m.sap_qty))*cost;
+      }
+    });
+    var gDiff=gPhys-gSAP, gVarCls=cnt===0?'none':gDiff===0?'pos':gDiff>0?'pos':'neg';
+    var gVarTxt=cnt===0?'—':(gDiff>=0?'+':'')+gDiff.toLocaleString();
+    var gCostTxt=cnt===0?'':'<span style="font-size:10px;color:var(--ink-3);margin-left:4px">'+(gCostVar>=0?'+$':'-$')+Math.abs(gCostVar).toLocaleString(undefined,{maximumFractionDigits:0})+'</span>';
+    gbHtml+='<div class="gb-row"><span class="gb-icon">'+GROUP_ICONS[name]+'</span><span class="gb-name">'+name+'</span>'
+      +'<div class="gb-bar-wrap"><div class="gb-bar'+(cnt===tot&&tot>0?' done':'')+'" style="width:'+pctG+'%"></div></div>'
+      +'<span class="gb-frac">'+cnt+'/'+tot+'</span>'
+      +'<span class="gb-var '+gVarCls+'">'+gVarTxt+gCostTxt+'</span></div>';
+  });
+  html += '<div class="group-breakdown"><div style="padding:.6rem 1rem;border-bottom:1px solid var(--line)"><span class="card-heading" style="margin:0">By Group</span></div>'+gbHtml+'</div>';
+
+    /* ── Variance sections: Top 10 Positive + Top 10 Negative + Full list ── */
+
+  /* Sort copies by diff for top-10 sections */
+  var posItems  = withVar.filter(function(x){ return x.diff > 0; })
+    .sort(function(a,b){ return b.diff - a.diff; });
+  var negItems  = withVar.filter(function(x){ return x.diff < 0; })
+    .sort(function(a,b){ return a.diff - b.diff; });
+
+  function varRow(x) {
+    var sign = x.diff>0?'+':'';
+    var vcls = x.diff>0?'pos':'neg';
+    var dImp = x.dollarImpact!=null ? fmt$(x.dollarImpact) : '—';
+    var dCls = x.dollarImpact==null?'ri-dollar-na':x.dollarImpact>0?'ri-dollar-pos':'ri-dollar-neg';
+    return '<div class="result-item">'
+      +'<div class="ri-desc">'+esc(x.desc)+'</div>'
+      +'<div class="ri-dollar '+dCls+'">'+dImp+'</div>'
+      +'<div class="ri-qtys ri-id">'+x.id+' &middot; SAP '+x.sap.toLocaleString()+' &rarr; Counted '+x.phys.toLocaleString()
+      +(x.cost>0?' &middot; $'+x.cost.toFixed(4)+'/unit':'')+' </div>'
+      +'<div class="ri-var '+vcls+'">'+sign+x.diff.toLocaleString()+'</div>'
+      +'</div>';
+  }
+
+  /* Top 10 Positive */
+  html += '<div>'
+    +'<div class="section-heading" style="color:var(--ok)">'
+    +'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>'
+    +'&nbsp;Top 10 Positive Variances'
+    +'<span class="section-pill" style="background:var(--ok-bg);color:var(--ok);border-color:var(--ok-line)">'+posItems.length+'</span>'
+    +'</div>';
+  if (posItems.length) {
+    html += '<div class="result-list">';
+    posItems.slice(0,10).forEach(function(x){ html += varRow(x); });
+    if (posItems.length > 10) {
+      html += '<div class="empty-section" style="color:var(--ink-3);font-size:11px">+'+(posItems.length-10)+' more — see full list below</div>';
+    }
+    html += '</div>';
+  } else {
+    html += '<div class="result-list"><div class="empty-section">No positive variances.</div></div>';
+  }
+  html += '</div>';
+
+  /* Top 10 Negative */
+  html += '<div>'
+    +'<div class="section-heading" style="color:var(--bad)">'
+    +'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>'
+    +'&nbsp;Top 10 Negative Variances'
+    +'<span class="section-pill bad">'+negItems.length+'</span>'
+    +'</div>';
+  if (negItems.length) {
+    html += '<div class="result-list">';
+    negItems.slice(0,10).forEach(function(x){ html += varRow(x); });
+    if (negItems.length > 10) {
+      html += '<div class="empty-section" style="color:var(--ink-3);font-size:11px">+'+(negItems.length-10)+' more — see full list below</div>';
+    }
+    html += '</div>';
+  } else {
+    html += '<div class="result-list"><div class="empty-section">No negative variances.</div></div>';
+  }
+  html += '</div>';
+
+  /* Full variance list — collapsible */
+  html += '<div>'
+    +'<details>'
+    +'<summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding:.5rem 0;'
+    +'font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3)">'
+    +'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>'
+    +'All Variances — Ranked by Dollar Impact'
+    +'<span class="section-pill'+(withVar.length?' bad':'')+'">'+withVar.length+'</span>'
+    +'</summary>';
+  if (withVar.length) {
+    html += '<div class="result-list">';
+    withVar.forEach(function(x){ html += varRow(x); });
+    html += '</div>';
+  } else {
+    html += '<div class="result-list"><div class="empty-section">'+(counted?'No variances — all counts match SAP ✓':'No items counted yet.')+'</div></div>';
+  }
+  html += '</details></div>';
+
+    /* Uncounted with estimated value at risk */
+  var uncountedVal = uncounted.reduce(function(s,x){return s+x.sap*(COST_MAP[x.id]||0);},0);
+  html += '<div><div class="section-heading">Uncounted Items '
+    +'<span class="section-pill">'+uncounted.length+'</span>'
+    +(uncountedVal>0?'<span style="font-size:11px;color:var(--warn);margin-left:auto">~'+fmtUSD(uncountedVal)+' at risk</span>':'')
+    +'</div>';
+  if (uncounted.length) {
+    html += '<div class="result-list">';
+    uncounted.forEach(function(x){
+      var valAtRisk = x.cost>0 ? fmtUSD(x.sap*x.cost) : '—';
+      html += '<div class="result-item">'
+        +'<div class="ri-desc">'+esc(x.desc)+'</div>'
+        +'<div class="ri-sap ri-dollar-na">'+valAtRisk+'</div>'
+        +'<div class="ri-id">'+x.id+' &middot; SAP '+x.sap.toLocaleString()+(x.cost>0?' &middot; $'+x.cost.toFixed(4)+'/unit':'')+'</div>'
+        +'</div>';
+    });
+    html += '</div>';
+  } else {
+    html += '<div class="result-list"><div class="empty-section">All items counted ✓</div></div>';
+  }
+  html += '</div>';
+
+  document.getElementById('totals-content').innerHTML = html;
 }
 
 function renderThumbs(id) {
@@ -1445,6 +1654,9 @@ async function confirmAddItem() {
 }
 
 /* ─── Calculator ────────────────────────────────────────── */
+/* ─── Material cost map (Price ÷ 1000, per case/unit) ──── */
+var COST_MAP = {"1001038":6.6487,"1001039":8.886,"1001040":8.6001,"1001041":11.8318,"1001042":6.7729,"1001043":9.0589,"1001045":6.7186,"1001046":8.7644,"1001118":0.0,"1001828":9.3512,"1001853":19.8621,"1001874":11.8114,"1001876":10.9879,"1001883":10.8354,"1001886":11.7788,"1001892":11.5611,"1003855":21.3415,"1005151":10.5102,"1005173":9.1234,"1005177":10.7412,"1005181":9.0646,"1005184":8.9013,"1005185":9.052,"1005190":10.165,"1005305":10.923,"1005306":17.2661,"1005307":11.1512,"1005327":4.749,"1005328":4.664,"1005333":7.3276,"1005334":7.237,"1005335":8.4392,"1005338":5.9816,"1005339":5.9333,"1005340":12.8549,"1005341":5.5938,"1005349":5.4849,"1005351":11.5195,"1005361":5.6964,"1005362":6.8995,"1005368":9.666,"1005369":8.3146,"1005375":11.1564,"1005376":5.5484,"1005377":19.2747,"1005378":11.4668,"1005379":11.376,"1005380":11.6591,"1005381":10.0875,"1005382":9.5779,"1005383":12.3484,"1005401":9.9669,"1005403":6.7817,"1005405":6.7859,"1005406":6.8471,"1005407":6.6306,"1005408":8.7402,"1005409":6.9059,"1005410":24.9872,"1005411":25.2512,"1005415":9.1363,"1005416":9.1562,"1005417":9.3055,"1005418":10.053,"1005419":11.9707,"1005428":10.5102,"1005429":17.7883,"1005431":6.9215,"1005432":10.2642,"1005434":8.5283,"1005435":8.4829,"1005436":9.6577,"1005438":12.5234,"1005439":12.742,"1005440":5.1732,"1005441":6.748,"1005442":5.2997,"1005446":9.6317,"1005447":7.9099,"1007066":10.6294,"1007091":11.6101,"1007092":10.0326,"1007094":10.8229,"1007128":16.2597,"1008126":6.9632,"1008127":7.1514,"1008150":12.0911,"1008151":12.1617,"1008152":12.6279,"1008175":6.0711,"1008176":6.7459,"1008177":6.2217,"1008179":7.1437,"1008182":7.6196,"1008183":7.5838,"1008184":11.3189,"1008185":11.292,"1008186":7.7637,"1008194":9.5839,"1008196":10.8795,"1008218":12.1156,"1008225":5.1653,"1008226":5.4483,"1008227":5.7963,"1008232":5.8529,"1008234":5.8657,"1008240":6.778,"1008241":5.2081,"1008244":8.0769,"1008246":11.3188,"1008252":7.2534,"1008253":7.3518,"1008257":4.6527,"1008258":4.8614,"1008259":5.1322,"1008280":20.3849,"1008289":11.0293,"1008291":10.8548,"1008292":65.4947,"1008317":13.1289,"1008330":18.2124,"1008331":60.2954,"1008340":11.7289,"1008366":51.3717,"1008440":16.3581,"1008500":15.8767,"1008506":6.9861,"1008545":29.5191,"1009170":9.9472,"2103929":0.8705,"2104001":2.005,"2104028":1.7827,"2104029":1.306,"2104033":1.2324,"2104036":2.5082,"2104037":1.2485,"2104041":1.2688,"2104050":0.7709,"2104053":0.7237,"2104087":0.8581,"2104089":0.7562,"2104099":1.3299,"2104100":1.0448,"2104103":1.1217,"2104130":1.8672,"2104140":1.3281,"2104153":1.7472,"2104154":2.0819,"2104155":0.8645,"2104157":1.46,"2104170":1.1645,"2104171":1.1505,"2104172":0.7219,"2104173":0.7282,"2104174":0.7283,"2104185":1.7712,"2104186":1.7163,"2104190":1.1708,"2104191":1.18,"2104194":1.1055,"2104195":1.3532,"2104204":1.9661,"2104205":1.9616,"2104212":0.9716,"2104215":1.0041,"2104216":1.0033,"2104217":0.9661,"2104218":1.0196,"2104219":1.1012,"2104220":1.3467,"2104228":1.5516,"2104243":1.0285,"2104244":1.6927,"2104248":1.1918,"2104249":1.1835,"2104250":2.8839,"2104263":1.3766,"2104265":1.3714,"2104266":0.8718,"2104268":0.9907,"2104271":1.1616,"2104272":1.5841,"2104280":0.9488,"2104283":1.3911,"2104284":1.4101,"2104285":1.5206,"2104286":1.256,"2104287":0.9058,"2104307":1.1387,"2104317":1.7883,"2104318":1.4336,"2104323":0.8534,"2104332":0.9934,"2104334":0.8788,"2104335":1.4324,"2104336":1.5532,"2104340":0.9277,"2104342":1.1397,"2104343":0.79,"2104344":1.1505,"2104345":1.0171,"2104347":1.5133,"2104351":1.269,"2104352":1.2242,"2104353":1.0114,"2104354":1.2568,"2104360":1.5832,"2104361":1.2524,"2104362":1.623,"2104364":1.6686,"2104365":0.8676,"2104366":0.9712,"2104388":1.0745,"2104389":1.0713,"2104390":1.1318,"2104393":1.2324,"2104395":1.0318,"2104396":1.521,"2104397":2.3523,"2104399":1.3221,"2104400":1.031,"2104401":1.8175,"2104403":1.9723,"2104404":1.1693,"2104405":0.7515,"2104406":0.0,"2104407":0.7624,"2104900":0.4656,"2104901":0.4733,"2104902":0.6093,"2104903":0.647,"2104904":0.8972,"2104905":0.8487,"2104906":2.1383,"2104907":1.3149,"2104908":1.524,"2104909":0.9337,"2104910":1.3083,"2104911":2.0053,"2104912":6.3669,"2104913":0.9411,"2104914":5.0586,"2104915":3.7223,"2104916":2.3286,"2104917":0.96,"2105250":2.5633,"2106272":1.4416,"2107712":1.4293,"2107713":1.6413,"2109000":2.5837,"2109001":2.5837,"2109015":2.3668,"2109028":6.6534,"2109029":4.552,"2109033":1.2722,"2109036":2.9055,"2109037":2.252,"2109041":1.8688,"2109050":2.9675,"2109053":0.7738,"2109069":2.7924,"2109070":21.3327,"2109087":4.2329,"2109089":2.5707,"2109093":4.0819,"2109094":2.7937,"2109096":3.4497,"2109099":1.3198,"2109100":1.3647,"2109130":2.2743,"2109139":2.1809,"2109140":3.6153,"2109141":3.3005,"2109153":1.788,"2109154":2.4523,"2109155":1.6542,"2109157":1.178,"2109170":1.3784,"2109171":1.3501,"2109172":1.208,"2109173":1.208,"2109174":1.8387,"2109185":2.144,"2109186":1.8442,"2109190":1.2172,"2109191":1.25,"2109194":1.3072,"2109195":1.3716,"2109204":1.741,"2109205":1.7495,"2109212":1.2617,"2109213":1.8414,"2109214":1.5463,"2109215":1.6283,"2109216":1.3644,"2109217":1.4453,"2109218":1.4355,"2109219":1.3544,"2109220":0.8461,"2109221":2.1289,"2109228":1.2951,"2109243":1.3643,"2109244":1.5266,"2109248":1.8776,"2109249":1.6701,"2109250":0.6284,"2109263":2.0128,"2109265":1.482,"2109266":1.5165,"2109268":1.4751,"2109271":0.8542,"2109272":1.4216,"2109280":0.8173,"2109283":1.6207,"2109284":0.5853,"2109285":0.492,"2109286":1.5149,"2109287":1.547,"2109307":1.2698,"2109308":1.5775,"2109317":6.3548,"2109318":3.6262,"2109323":1.6791,"2109332":1.8296,"2109334":4.0122,"2109335":3.7584,"2109336":0.9273,"2109337":1.4593,"2109340":1.4685,"2109342":1.6551,"2109343":9.7341,"2109344":1.7461,"2109345":2.3319,"2109346":2.4303,"2109347":2.1324,"2109351":1.1795,"2109352":1.553,"2109353":1.1331,"2109354":1.1696,"2109355":2.9613,"2109359":1.3344,"2109360":0.8595,"2109361":2.7036,"2109362":3.6853,"2109364":1.2999,"2109365":4.9179,"2109366":4.1602,"2109367":1.206,"2109368":1.7018,"2109369":0.001,"2109370":0.001,"2109371":0.001,"2109373":0.001,"2109374":0.001,"2109375":0.001,"2109376":0.001,"2109377":0.001,"2109378":0.001,"2109379":0.001,"2109380":0.001,"2109383":0.001,"2109384":0.001,"2109385":0.001,"2109386":0.001,"2109387":0.001,"2109388":0.001,"2109389":2.6543,"2109390":2.6671,"2109393":0.001,"2109395":2.4985,"2109396":3.6529,"2109397":3.6627,"2109399":3.0581,"2109400":4.8634,"2109401":4.0819,"2109404":1.0482,"2109405":0.742,"2109406":0.0,"2109407":2.826,"2113609":1.0732,"2113610":0.5294,"2113611":0.5792,"2113613":0.501,"2113614":0.5162,"2113615":0.5294,"2113616":0.726,"2119000":0.6886,"2119001":0.7263,"2119015":1.1679,"2119028":1.8571,"2119029":0.7559,"2119033":0.6293,"2119036":1.9353,"2119037":0.8686,"2119041":0.8282,"2119050":1.8165,"2119053":0.4911,"2119087":1.9651,"2119089":1.8416,"2119094":1.296,"2119096":1.2724,"2119099":0.6615,"2119100":0.6287,"2119103":1.7693,"2119105":1.4231,"2119106":1.3847,"2119107":1.4311,"2119114":1.1668,"2119115":1.2391,"2119120":1.3586,"2119124":1.2391,"2119129":1.233,"2119130":1.8444,"2119139":1.0886,"2119140":0.7471,"2119141":1.566,"2119153":0.5366,"2119154":0.6587,"2119155":0.518,"2119157":0.7227,"2119170":0.6424,"2119171":0.649,"2119172":0.5829,"2119173":0.5879,"2119174":0.602,"2119185":0.6456,"2119186":0.6583,"2119190":0.5611,"2119191":0.5714,"2119194":0.496,"2119195":0.5412,"2119204":0.7747,"2119205":0.8,"2119212":0.4557,"2119213":0.9728,"2119214":0.9061,"2119215":0.6557,"2119216":0.6597,"2119217":0.6407,"2119218":0.6368,"2119219":0.7509,"2119220":0.9538,"2119221":1.2455,"2119228":1.3507,"2119243":0.6629,"2119244":0.8347,"2119248":0.6884,"2119249":0.7269,"2119250":1.0325,"2119263":0.5372,"2119265":0.503,"2119266":0.4805,"2119268":0.6573,"2119271":0.7676,"2119272":1.6555,"2119280":1.4878,"2119283":0.7025,"2119284":0.8347,"2119285":0.8081,"2119286":0.6995,"2119287":0.508,"2119307":1.0149,"2119316":1.3865,"2119317":1.9357,"2119318":0.7818,"2119323":0.4807,"2119332":0.6194,"2119333":1.4702,"2119334":1.9484,"2119335":0.8188,"2119336":0.8031,"2119337":0.5067,"2119340":0.6257,"2119342":0.6948,"2119343":1.2443,"2119344":0.9294,"2119345":0.9211,"2119346":0.8738,"2119347":1.1236,"2119351":0.5242,"2119352":0.5392,"2119353":0.6741,"2119354":0.5129,"2119355":1.7902,"2119359":0.4412,"2119360":1.0146,"2119361":0.4318,"2119362":1.7801,"2119364":1.0015,"2119365":0.9885,"2119366":0.978,"2119367":0.6852,"2119368":0.5854,"2119369":0.001,"2119370":0.001,"2119371":0.001,"2119373":0.001,"2119374":0.001,"2119375":0.001,"2119376":0.001,"2119377":0.001,"2119378":0.001,"2119379":0.001,"2119380":0.001,"2119381":0.001,"2119383":0.001,"2119384":0.001,"2119385":0.001,"2119386":0.001,"2119387":0.001,"2119388":0.4178,"2119389":0.6905,"2119390":0.7076,"2119393":0.001,"2119394":1.2377,"2119395":0.8469,"2119396":0.9932,"2119397":1.3996,"2119398":1.553,"2119399":1.0672,"2119400":1.5402,"2119401":1.7252,"2119402":2.4081,"2119404":0.633,"2119405":0.5504,"2119406":0.0,"2119407":0.6014,"2122483":416.4563,"2122487":37.1583,"2122489":35.8176,"2123600":2.0933,"2123601":0.7904,"2125004":0.7216,"2125005":0.6468,"2126034":1.4421,"2129042":1.4334,"2129046":1.01,"2129047":1.0158,"2129049":1.0603,"2129050":1.0709,"2129051":1.7865,"2129052":1.8154,"2391247":2.4248,"2391321":2.1544,"2391450":1.7279,"2391514":2.5318,"2394001":1.9232,"2397503":1.99,"2397510":1.16,"2397526":2.09,"2397529":2.04,"2397543":3.3126,"2397545":2.49,"2397733":6.7761,"2397736":3.17,"2398106":3.0,"2398309":1.09,"2398435":0.804,"2399022":2.0151,"2399028":2.67,"2399029":1.0764,"2399031":1.87,"2399032":0.96,"2399035":1.4704,"2399040":2.29,"2399145":1.4175,"3301036":3.89,"3301039":1.1,"3301078":2.25,"3301094":0.465,"3301120":12.432,"3301129":1.081,"3301151":2.0613,"3301153":3.5606,"3301207":2.3038,"3301244":0.78,"3301247":2.3381,"3301264":0.0076,"3301290":3.1906,"3301294":5.5232,"3301321":2.1144,"3301360":1.0167,"3301361":26.2,"3301450":1.688,"3301514":2.4918,"3301588":1.0285,"3301805":0.8719,"3301853":1.2,"3301856":3.25,"3301857":5.29,"3301890":2.2619,"3301908":4.0477,"3302006":3.6035,"3302289":3.0797,"3302495":0.0,"3302498":0.0,"3304001":1.8832,"3305647":3.092,"3305649":3.2424,"3305650":2.6206,"3305704":1.1,"3305710":6.27,"3305712":17.6829,"3305715":5.77,"3305718":3.04,"3305720":3.3,"3305721":5.8,"3305723":0.7514,"3307500":1.68,"3307501":26.015,"3307502":0.8674,"3307503":1.95,"3307506":0.72,"3307507":1.4606,"3307508":1.1535,"3307509":1.0759,"3307510":1.12,"3307511":1.1846,"3307513":1.28,"3307515":0.7256,"3307516":11.55,"3307517":1.11,"3307518":5.4,"3307520":1.93,"3307523":1.4028,"3307525":1.65,"3307526":2.05,"3307529":2.0,"3307541":1.1689,"3307543":3.2726,"3307545":2.45,"3307550":31.1245,"3307556":4.587,"3307563":1.3235,"3307574":1.1453,"3307581":1.0205,"3307583":0.2928,"3307586":13.1977,"3307705":5.1345,"3307707":0.4693,"3307708":0.7932,"3307710":0.6767,"3307711":3.0982,"3307712":1.8789,"3307713":3.25,"3307714":5.35,"3307715":0.802,"3307719":2.0167,"3307721":1.4153,"3307729":1.93,"3307731":5.82,"3307733":6.7361,"3307735":3.0357,"3307736":3.13,"3307743":0.5652,"3307745":2.85,"3307749":1.9156,"3307750":0.9396,"3308022":2.92,"3308042":8.6464,"3308063":5.0769,"3308106":2.96,"3308147":2.6787,"3308210":5.1011,"3308213":3.5,"3308228":4.0907,"3308239":1.49,"3308246":0.6807,"3308247":0.5742,"3308275":3.5406,"3308308":2.4,"3308309":1.05,"3308317":8.3901,"3308330":0.5754,"3308332":2.6174,"3308356":1.7291,"3308358":3.55,"3308385":3.56,"3308395":0.42,"3308414":10.5,"3308415":4.0,"3308434":0.87,"3308491":0.6336,"3308510":0.6805,"3308546":2.2804,"3308561":2.9,"3308576":1.3783,"3308580":1.2046,"3308591":14.12,"3309005":2.27,"3309006":2.2305,"3309008":0.211,"3309009":0.385,"3309011":1.63,"3309012":8.0873,"3309013":4.0,"3309015":0.7059,"3309016":0.635,"3309017":1.7347,"3309019":0.5233,"3309020":0.87,"3309021":1.25,"3309022":1.9751,"3309023":3.67,"3309025":0.37,"3309027":1.1495,"3309028":2.63,"3309029":1.0364,"3309031":1.83,"3309032":0.92,"3309035":1.4304,"3309036":1.2,"3309037":1.22,"3309039":2.5,"3309040":2.25,"3309041":1.13,"3309042":1.0012,"3309043":3.2607,"3309044":2.77,"3309045":13.5702,"3309046":5.2,"3309048":3.14,"3309049":24.5723,"3309051":13.62,"3309052":20.3,"3309053":6.6,"3309057":2.1322,"3309058":3.9,"3309061":4.0048,"3309062":2.99,"3309068":0.6353,"3309070":1.4239,"3309071":0.8,"3309072":0.7369,"3309073":1.25,"3309074":1.03,"3309075":0.28,"3309076":21.97,"3309077":13.04,"3309078":23.3774,"3309079":17.95,"3309080":17.5006,"3309081":9.0,"3309082":18.25,"3309083":1.574,"3309084":3.9924,"3309087":3.66,"3309088":1.1362,"3309090":5.9123,"3309091":0.581,"3309092":3.97,"3309093":1.3914,"3309094":4.19,"3309095":2.2329,"3309096":0.6654,"3309097":0.76,"3309098":10.22,"3309099":4.5464,"3309102":1.08,"3309103":4.0,"3309106":0.9306,"3309107":1.5382,"3309108":3.088,"3309109":3.7263,"3309111":1.5,"3309112":2.1663,"3309115":2.8486,"3309117":5.98,"3309120":4.4,"3309121":9.9142,"3309122":1.95,"3309125":0.66,"3309126":1.18,"3309127":17.58,"3309128":13.14,"3309129":32.57,"3309133":2.2138,"3309134":1.0832,"3309135":4.5121,"3309136":20.323,"3309138":4.7593,"3309139":0.7104,"3309141":3.0,"3309142":0.6165,"3309143":5.483,"3309144":10.3064,"3309145":1.3775,"3309148":1.88,"3309151":0.26,"3309154":9.26,"3309155":2.12,"3309157":1.275,"3309163":3.6202,"3309164":2.5983,"3309167":5.0586,"3309168":0.9012,"3309173":0.3604,"3309174":9.1169,"3309991":5.62,"4400193":0.0189,"4400249":0.0407,"4400250":0.0163,"4400251":0.0193,"4400825":0.0487,"4400901":0.0278,"4400902":0.0357,"4400907":0.0279,"4400908":0.0168,"4400913":0.0299,"4400914":0.0142,"4400915":0.0461,"4400916":0.0214,"4400920":0.1277,"4400924":0.0306,"4400925":0.0325,"4400926":0.1282,"4400927":0.1094,"4400928":0.1584,"4400929":0.1127,"4400938":0.0843,"4400939":0.0717,"4400940":0.0719,"4400947":0.128,"4400948":0.0795,"4400949":0.0795,"4400975":0.0326,"4400976":0.0208,"4400977":0.0209,"4400978":0.0326,"4400979":0.0208,"4400980":0.021,"4400981":0.516,"4400983":0.1326,"4400984":0.1684,"4400985":0.1326,"4400986":0.0883,"4400994":0.15,"4400995":0.1503,"4400998":0.1503,"4401077":0.93,"4401081":0.79,"4401175":1.6015,"4401484":0.1015,"4401602":0.0646,"4401609":0.79,"4401679":0.038,"4401680":0.0338,"4401729":0.0019,"4402676":0.1936,"4402677":0.1041,"4402719":0.0408,"4402720":0.0196,"4402721":0.0182,"4402737":0.0999,"4402758":0.0118,"4402761":0.0118,"4402797":0.0132,"4402808":0.0286,"4402809":0.0143,"4403475":0.4752,"4403476":0.444,"4403478":0.4666,"4403653":0.051,"4403654":0.0213,"4403655":0.0226,"4403656":0.0316,"4403658":0.013,"4403922":0.2062,"4403923":0.1696,"4403924":0.0217,"4403925":0.0125,"4403926":0.0121,"4403927":0.0231,"4403928":0.0129,"4403929":0.0119,"4403930":0.0226,"4403931":0.0145,"4403932":0.0132,"4403984":0.0144,"4404244":0.1914,"4404756":0.0986,"4404757":0.1135,"4404758":0.084,"4404759":0.1135,"4404785":0.0235,"4404786":0.0159,"4404787":0.0142,"4404788":0.0231,"4404789":0.0145,"4404790":0.0138,"4404858":0.0345,"4404859":0.0149,"4404860":0.0166,"4404903":874.9184,"4404907":0.0211,"4404908":0.0121,"4404909":0.0205,"4404910":0.0121,"4404915":0.0218,"4404916":0.0105,"4404917":0.1619,"4404938":0.0381,"4404958":0.0516,"4405094":0.0258,"4405095":0.0269,"4405096":0.0254,"4405097":0.0249,"4405098":0.0311,"4405099":0.0271,"4405100":0.0255,"4405101":0.0269,"4405102":0.0255,"4405535":0.3235,"4405544":0.413,"4405546":0.2734,"4405547":0.4932,"4405597":0.0188,"4405664":0.0489,"4405665":0.0192,"4405666":0.0213,"4405667":0.0546,"4405668":0.0509,"4405669":0.0398,"4405670":0.0177,"4405671":0.0143,"4405672":0.0144,"4405673":0.0189,"4405674":0.0146,"4405675":0.0144,"4405676":0.0191,"4405677":0.0146,"4405678":0.0145,"4405679":0.0179,"4405680":0.0498,"4405681":0.0418,"4405682":0.0218,"4405683":0.0456,"4405684":0.045,"4405687":2.37,"4405696":0.0375,"4405697":0.0309,"4405698":0.0309,"4405841":0.0524,"4405873":0.1112,"4405874":0.0848,"4405875":0.1117,"4405876":0.083,"4405906":0.317,"4405907":0.203,"4405911":0.0748,"4405912":0.0539,"4405917":0.1629,"4405921":0.076,"4405922":0.0536,"4405923":0.0947,"4405925":0.0911,"4405926":0.049,"4405935":0.0337,"4405944":0.0594,"4405952":0.1255,"4405953":0.1166,"4406091":0.1882,"4406200":0.462,"4406201":0.48,"4406202":0.619,"4406203":0.48,"4406204":0.588,"4406207":0.565,"4406208":0.0755,"4406209":0.0756,"4406210":0.075,"4406211":0.0745,"4406212":0.0712,"4406214":0.0738,"4406215":0.1108,"4406216":0.1105,"4406217":0.1108,"4406218":0.0767,"4406219":0.0767,"4406220":0.0861,"4406221":0.0824,"4406222":0.0846,"4406223":0.1108,"4406224":0.1115,"4406230":0.0682,"4406231":0.1047,"4406235":0.0595,"4406236":0.0638,"4406237":0.0584,"4406243":0.0553,"4406246":0.0524,"4406248":0.0522,"4406249":0.0546,"4406250":0.0527,"4406263":0.1237,"4406264":0.1237,"4406266":0.0752,"4406268":0.1111,"4406277":0.0269,"4406278":0.0915,"4406287":0.0206,"4406288":0.0148,"4406289":0.0148,"4406290":0.0207,"4406291":0.0147,"4406292":0.0148,"4406293":0.0184,"4406294":0.0145,"4406295":0.0145,"4406296":0.0249,"4406297":0.0167,"4406298":0.0141,"4406299":0.0281,"4406300":0.0162,"4406301":0.014,"4406302":0.0224,"4406304":0.0165,"4406305":0.0224,"4406307":0.0165,"4406312":0.0357,"4406313":0.0301,"4406314":0.0327,"4406315":0.5271,"4406316":0.0273,"4406317":0.0196,"4406318":0.0196,"4406320":0.0554,"4406328":0.1809,"4406329":0.0778,"4406333":0.1809,"4406334":0.0778,"4406335":0.1809,"4406336":0.0778,"4406337":0.1809,"4406338":0.0778,"4406339":0.0143,"4406340":0.0118,"4406341":0.0139,"4406342":0.0221,"4406343":0.0122,"4406344":0.0172,"4406345":0.0222,"4406346":0.026,"4406347":0.0219,"4406348":0.012,"4406349":0.012,"4406350":0.0221,"4406351":0.012,"4406352":0.0121,"4406353":0.0245,"4406354":0.0164,"4406355":0.0156,"4406356":0.021,"4406357":0.012,"4406358":0.0118,"4406359":0.0218,"4406360":0.0105,"4406361":0.0115,"4406362":0.0226,"4406363":0.0135,"4406364":0.0118,"4406365":0.021,"4406366":0.012,"4406367":0.0118,"4406375":0.0239,"4406384":0.0816,"4406385":0.055,"4406386":0.0816,"4406387":0.055,"4406388":0.384,"4406406":0.0309,"4406407":0.0239,"4406438":0.14,"4406440":0.3887,"4406441":0.1967,"4406470":0.037,"4406471":0.0224,"4406472":0.0236,"4406483":0.0543,"4406485":0.0712,"4406486":0.0524,"4406489":0.0375,"4406490":0.541,"4406491":0.0345,"4406492":0.0189,"4406493":0.0181,"4406494":0.304,"4406495":0.042,"4406496":2.37,"4406575":0.6566,"4406576":0.9506,"4406589":0.089,"4406596":0.0857,"4406625":0.0662,"4406644":0.0488,"4406683":0.0632,"4406685":0.0498,"4406818":0.0181,"4406819":0.0181,"4406831":0.0833,"4406832":0.0713,"4406855":0.0528,"4406920":0.5194,"4406922":0.447,"4406923":0.2968,"4406929":0.0152,"4406930":0.0243,"4406958":0.0512,"4406959":0.0618,"4406960":0.0636,"4406961":0.1464,"4406962":0.0754,"4406963":0.0591,"4406964":0.0756,"4406965":0.0594,"4406966":0.072,"4406968":0.0741,"4406969":0.0591,"4407020":0.0093,"4407021":0.0042,"4407023":0.01,"4407024":0.0047,"4407030":0.1685,"4407031":0.1022,"4407032":0.0131,"4407033":0.014,"4407034":0.1693,"4407035":0.1044,"4407036":0.0153,"4407037":0.0148,"4407038":0.1687,"4407039":0.103,"4407040":0.0139,"4407041":0.0142,"4407042":0.1723,"4407043":0.1063,"4407044":0.0173,"4407045":0.0147,"4407046":0.1227,"4407047":0.45,"4407050":0.0456,"4407051":0.1047,"4407052":0.0156,"4407057":0.0719,"4407058":0.0594,"4407059":0.0175,"4407060":0.1279,"4407061":0.0755,"4407062":0.0555,"4407065":0.0717,"4407066":0.0568,"4407067":0.0175,"4407088":0.1714,"4407089":0.1073,"4407093":0.1351,"4407094":0.0872,"4407097":0.1121,"4407202":0.0318,"4407203":0.0202,"4407204":0.0185,"4407215":0.0734,"4407323":0.6304,"4407351":0.4851,"4407356":0.0374,"4407357":0.0263,"4407358":0.0253,"4407359":0.0377,"4407360":0.0302,"4407361":0.0287,"4407362":0.0346,"4407363":0.0232,"4407364":0.0222,"4407365":0.0458,"4407375":0.0884,"4407376":0.0684,"4407378":0.0239,"4407379":0.0139,"4407382":0.0241,"4407383":0.0139,"4407407":0.4514,"4407419":0.0841,"4407455":1.1997,"4407490":0.1741,"4407491":0.1738,"4407563":0.0203,"4407579":0.658,"4407580":0.3206,"4407597":0.1454,"4407673":0.0157,"4407675":0.0151,"4407678":0.1728,"4407679":0.1048,"4407722":0.0056,"4407723":0.0056,"4407724":0.0056,"4407725":0.0087,"4407726":0.0058,"4407727":0.0088,"4407728":0.0086,"4407752":0.026,"4407753":0.0166,"4407754":0.0149,"4407755":0.0257,"4407756":0.0177,"4407757":0.0157,"4407758":0.05,"4407759":0.0214,"4407760":0.0182,"4407762":0.0271,"4407764":0.0187,"4407765":0.0305,"4407766":0.0135,"4407767":0.0196,"4407768":0.0358,"4407802":0.5424,"4407852":0.0182,"4407853":0.0174,"4408445":0.0319,"4408446":0.0188,"4408447":0.0188,"4408448":0.0319,"4408449":0.0188,"4408450":0.0188,"4408451":0.0319,"4408452":0.0188,"4408453":0.0188,"4408455":0.0188,"4408456":0.0188,"4408457":0.0459,"4408458":0.0273,"4408459":0.0204,"4408486":0.0207,"4408487":0.0425,"4408512":0.043,"4408513":0.0163,"4408514":0.0156,"4408515":2.63,"4408519":0.0872,"4408520":0.0358,"4408521":0.0271,"4408522":0.0305,"4408523":0.3702,"4408524":0.6555,"4408525":0.4603,"4408526":0.5151,"4408527":0.5408,"4408528":0.3514,"4408529":0.59,"4408534":0.304,"4408535":0.0202,"4408536":0.0129,"4408537":0.0187,"4408538":0.0135,"4408539":0.0196,"4408540":0.0121,"4408541":0.5434,"4408542":0.6314,"4408543":0.0616,"4408545":0.0684,"4408546":0.0687,"4408548":0.1156,"4408550":0.0575,"4408551":0.0527,"4408552":0.0466,"4408553":0.0475,"4408558":0.408,"4408560":0.0692,"4408562":0.0755,"4408563":0.0532,"4408564":0.0755,"4408566":0.1105,"4408567":0.0555,"4408568":0.0756,"4408569":0.0553,"4408572":0.0141,"4408576":0.0316,"4408577":0.1464,"4408578":0.0682,"4408579":0.0527,"4408580":0.1118,"4408582":0.1115,"4408584":0.1118,"4408586":0.078,"4408587":0.049,"4408588":0.0759,"4408590":0.1511,"4408591":0.0509,"4408592":0.1511,"4408593":0.0509,"4408594":0.1511,"4408595":0.0509,"4408596":0.1511,"4408597":0.0509,"4408598":0.1511,"4408599":0.0509,"4408600":0.1511,"4408601":0.0509,"4408602":0.1511,"4408603":0.0509,"4408604":0.1511,"4408605":0.0509,"4408606":0.1511,"4408607":0.0509,"4408608":0.1511,"4408609":0.0509,"4408654":0.0974,"4408655":0.054,"4408656":0.115,"4408657":0.0974,"4408658":0.0493,"4408661":0.0974,"4408662":0.054,"4408663":0.1154,"4408664":0.054,"4408665":0.115,"4408668":0.054,"4408669":0.0594,"4408670":0.0583,"4408674":0.0974,"4408675":0.054,"4408676":0.115,"4408677":0.0974,"4408678":0.054,"4408679":0.115,"4408680":0.0974,"4408681":0.0493,"4408683":0.0974,"4408684":0.0493,"4408685":0.0974,"4408686":0.0493,"4408687":0.0974,"4408688":0.0493,"4408689":0.0974,"4408690":0.054,"4408719":0.052,"4408793":0.0299,"4408794":0.0136,"4408795":0.0136,"4408886":0.0158,"4409023":0.0299,"4409024":0.0142,"4409025":0.013,"4409029":0.0159,"4409037":0.355,"4409076":0.0178,"4409080":0.0166,"4409081":0.0176,"4409093":0.0146,"4409103":0.012,"4409195":0.0185,"4409221":0.0192,"4409222":0.0225,"4409223":0.0188,"4409224":0.0192,"4409225":0.0194,"4409226":0.0195,"4409227":0.02,"4409228":0.0194,"4409229":0.0255,"4409230":0.0146,"4409231":0.0367,"4409286":0.0461,"4409287":0.0214,"4409288":0.022,"4409306":0.0249,"4409309":0.0666,"4409310":0.0677,"4409311":0.1156,"4409312":0.092,"4409315":0.1011,"4409320":0.1246,"4409323":0.0674,"4409324":0.0628,"4409329":0.1204,"4409330":0.126,"4409334":0.0228,"4409346":0.145,"4409351":0.0794,"4409352":0.0758,"4409402":0.0525,"4409403":0.0456,"4409404":0.0472,"4409417":0.0727,"4409446":0.055,"4409447":0.0551,"4409471":0.05,"4409472":0.12,"4409473":0.7,"4409488":0.0555,"4409500":0.4487,"4409502":0.4081,"4409503":0.4546,"4409520":0.34,"4409526":0.0816,"4409527":0.054,"4409530":0.6161,"4409531":0.0312,"4409532":0.0198,"4409533":0.0179,"4409537":0.4136,"4409539":0.0816,"4409540":0.055,"4409541":0.3798,"4409545":0.527,"4409551":0.3314,"4409562":0.5147,"4409563":0.4952,"4409564":0.4013,"4409570":0.0269,"4409571":0.1215,"4409578":0.0395,"4409579":0.0843,"4409581":0.0495,"4409584":0.2281,"4409585":0.2228,"4409588":0.0253,"4409589":0.0165,"4409590":0.0169,"4409591":0.024,"4409592":0.0165,"4409593":0.0174,"4409594":0.0794,"4409596":0.0319,"4409597":0.038,"4409649":0.0194,"4409667":0.1543,"4409674":0.1389,"4409675":0.1389,"4409691":0.0748,"4409693":0.0748,"4409722":0.0174,"4409734":0.0522,"4409805":0.1907,"4409806":0.0546,"4409807":0.1907,"4409808":0.0546,"4409810":0.0208,"4409811":0.0208,"4409813":0.0208,"4409814":0.0208,"4409829":0.0113,"4409830":0.0103,"4409833":0.0708,"4409834":0.0462,"4409835":0.0462,"4409838":0.1547,"4409839":0.0934,"4409840":0.177,"4409841":0.087,"4409842":0.1762,"4409843":0.0877,"4409844":0.1584,"4409845":0.0866,"4409848":0.175,"4409849":0.0876,"4409850":0.4666,"4409860":0.1389,"4409884":0.0268,"4409885":1.6186,"4409886":1.6562,"4409887":0.3425,"4409894":0.1543,"4409907":0.0115,"4409921":0.1543,"4409925":0.1543,"4409929":1.98,"4409930":0.4202,"4409939":0.0367,"4409949":0.384,"4409950":0.397,"4409951":0.0982,"4409952":0.441,"4409953":0.0058,"4409956":0.0747,"4409957":0.0494,"4409958":0.0747,"4409959":0.0494,"4409960":0.0747,"4409961":0.0494,"4409962":0.1203,"4409969":0.1543,"4409970":0.1366,"4409971":0.123,"4409972":0.123,"4409973":0.123,"4409974":0.1366,"4409975":0.1366,"4409976":0.1366,"4409977":0.1366,"4409979":0.1133,"4409980":0.075,"4409986":0.126,"4409987":0.0594,"4409988":0.0583,"4409989":0.0784,"4409991":0.0,"4410014":0.1097,"4410015":0.0682,"4410086":0.0457,"4410087":0.0302,"4410088":0.0302,"4410089":0.0457,"4410090":0.0302,"4410091":0.0302,"4410092":0.0457,"4410093":0.0302,"4410094":0.0302,"4410095":0.0457,"4410096":0.0302,"4410097":0.0302,"4410098":0.0457,"4410099":0.0302,"4410100":0.0302,"4410101":0.0457,"4410102":0.0302,"4410103":0.0302,"4410104":0.0457,"4410105":0.0302,"4410106":0.0302,"4410107":0.0457,"4410108":0.0302,"4410109":0.0302,"4410110":0.0457,"4410111":0.0302,"4410112":0.0302,"4410113":0.0457,"4410114":0.0302,"4410115":0.0302,"4410116":0.0765,"4410117":0.0518,"4410118":0.0302,"4410119":0.0,"4410123":0.0,"4410149":0.0591,"4410150":0.0275,"4410151":0.0275,"4410158":0.0,"4410159":0.0,"4410160":0.0,"4410161":0.0457,"4410162":0.0302,"4410163":0.0302,"4410165":0.0266,"4410166":0.0266,"4410167":0.0231,"4410168":0.0264,"4410169":0.0174,"4410170":0.0231,"4410171":0.0268,"4410172":0.0177,"4410173":0.0231,"4410174":0.0269,"4410175":0.0177,"4410176":0.0231,"4410177":0.0231,"4410178":0.0174,"4410181":0.0367,"4410182":0.0266,"4410183":0.0367,"4410184":0.0266,"4410185":0.0,"4410191":0.547,"4410192":0.0526,"4410195":0.1707,"4410196":0.1166,"4410197":0.1707,"4410198":0.1156,"4410250":0.0,"4410293":0.0,"4410294":0.0,"4410295":0.0,"4410309":0.0604,"4410310":0.0758,"4410311":0.0614,"4410312":0.0,"4410313":0.0627,"4410314":0.0435,"4410321":0.0448,"4410322":0.0,"4410325":0.0,"4410326":0.0,"4410327":0.0,"4410336":0.0426,"4410340":0.1425,"4410341":0.1585,"4410342":0.0,"4410343":0.0,"4410344":0.0,"4410345":0.0,"4410346":0.0,"4410347":0.0,"4410348":0.0,"4410349":0.0457,"4410350":0.0302,"4410351":0.0,"4410393":0.0,"4410394":0.0,"4410395":0.0,"4410396":0.0,"4410397":0.0,"4410398":0.0,"4410399":0.0,"4410400":0.0,"4410401":0.0,"4410402":0.0,"4410403":0.0,"4410404":0.0,"4410405":0.0,"4410406":0.0,"4410407":0.0,"4410411":0.0,"4410412":0.0,"4410413":0.0,"4410414":0.0,"4410415":0.0,"4410416":0.0,"4410417":0.0,"4410418":0.0,"4410419":0.0,"4410454":0.0,"4410456":0.0,"4410457":0.0,"4410458":0.0,"5000000":0.0,"5000001":0.0,"5000002":0.0,"5000003":0.0,"5000004":0.0,"5000005":0.0,"5000006":0.0,"5000007":0.0,"5000008":0.0,"5000009":0.0,"5000010":0.0,"5000011":0.0,"5000012":0.0,"5000013":0.0,"5000014":0.0,"5000015":0.0,"5000016":0.0,"5000017":0.0,"5000018":0.0,"5000019":0.0,"5000020":0.0,"5000021":0.0,"5000022":0.0,"5000023":0.0,"5000024":0.0,"5000025":0.0,"5000026":0.0,"5000027":0.0,"5000028":0.0,"5000029":0.0,"5000030":0.0,"5000031":0.0,"5000032":0.0,"5000033":0.0,"5000034":0.0,"5000035":0.0,"5000036":0.0,"5000037":0.0,"5000038":0.0,"5000039":0.0,"5000040":0.0,"5000041":0.0,"5000042":0.0,"5000043":0.0,"5000044":0.0,"5000045":0.0,"5000046":0.0,"5000047":0.0,"5000048":0.0,"5000049":0.0,"5000050":0.0,"5000051":0.0,"5000052":0.0,"5000053":0.0,"5000054":0.0,"5000055":0.0,"5000056":0.0,"5000057":0.0,"5000058":0.0,"5000059":0.0,"5000060":0.0,"5000061":0.0,"5000062":0.0,"5000063":0.0,"5000064":0.0,"5000065":0.0,"5000066":0.0,"5000067":0.0,"5000068":0.0,"5000069":0.0,"5000070":0.0,"5000071":0.0,"5000072":0.0,"5000073":0.0,"5000074":0.0,"5000075":0.0,"5000076":0.0,"5000077":0.0,"5000078":0.0,"5000079":0.0,"5000080":0.0,"5000081":0.0,"5000082":0.0,"5000083":0.0,"5000084":0.0,"5000085":0.0,"5000086":0.0,"5000087":0.0,"5000088":0.0,"5000089":0.0,"5000090":0.0,"5000091":0.0,"5000092":0.0,"5000093":0.0,"5000094":0.0,"5000095":0.0,"5000096":0.0,"5000097":0.0,"5000098":0.0,"5000099":0.0,"5000100":0.0,"5000101":0.0,"5000102":0.0,"5000103":0.0,"5000104":0.0,"5000105":0.0,"5000106":0.0,"5000107":0.0,"5000108":0.0,"5000109":0.0,"5000110":0.0,"5000111":0.0,"5000112":0.0,"5000113":0.0,"5000114":0.0,"5000115":0.0,"5000116":0.0,"5000117":0.0,"5000118":0.0,"5000119":0.0,"5000120":0.0,"5000121":0.0,"5000122":0.0,"5000123":0.0,"5000124":0.0,"5000125":0.0,"5000126":0.0,"5000127":0.0,"5000128":0.0,"5000129":0.0,"5000130":0.0,"5000131":0.0,"5000132":0.0,"5000133":0.0,"5000134":0.0,"5000135":0.0,"5000136":0.0,"5000137":0.0,"5000138":0.0,"5000139":0.0,"5000140":0.0,"5000141":0.0,"5000142":0.0,"5000143":0.0,"5000144":0.0,"5000145":0.0,"5000146":0.0,"5000147":0.0,"5000148":0.0,"5000149":0.0,"5000150":0.0,"5000151":0.0,"5000152":0.0,"5000153":0.0,"5000154":0.0,"5000155":0.0,"5000156":0.0,"5000157":0.0,"5000158":0.0,"5000159":0.0,"5000160":0.0,"5000161":0.0,"5000162":0.0,"5000163":0.0,"5000164":0.0,"5000165":0.0,"5000166":0.0,"5000167":0.0,"5000168":0.0,"5000169":0.0,"5000170":0.0,"5000171":0.0,"5000172":0.0,"5000173":0.0,"5000174":0.0,"5000175":0.0,"5000176":0.0,"5000177":0.0,"5000178":0.0,"5000179":0.0,"5000180":0.0,"5000181":0.0,"5000182":0.0,"5000183":0.0,"5000184":0.0,"5000185":0.0,"5000186":0.0,"5000187":0.0,"5000188":0.0,"5000189":0.0,"5000190":0.0,"5000191":0.0,"5000192":0.0,"5000193":0.0,"5000194":0.0,"5000195":0.0,"5000196":0.0,"5000197":0.0,"5000198":0.0,"5000199":0.0,"5000200":0.0,"5000201":0.0,"5000202":0.0,"5000203":0.0,"5000204":0.0,"5000205":0.0,"5000206":0.0,"5000207":0.0,"5000208":0.0,"5000209":0.0,"5000210":0.0,"5000211":0.0,"5000212":0.0,"5000213":0.0,"5000214":0.0,"5000215":0.0,"5000216":0.0,"5000217":0.0,"5000218":0.0,"5000219":0.0,"5000220":0.0,"5000221":0.0,"5000222":0.0,"5000223":0.0,"5000224":0.0,"5000225":0.0,"5000226":0.0,"5000227":0.0,"5000228":0.0,"5000229":0.0,"5000230":0.0,"5000231":0.0,"5000232":0.0,"5000233":0.0,"5000234":0.0,"5000235":0.0,"5000236":0.0,"5000237":0.0,"5000238":0.0,"5000239":0.0,"5000240":0.0,"5000241":0.0,"5000242":0.0,"5000243":0.0,"5000244":0.0,"5000245":0.0,"5000246":0.0,"5000247":0.0,"5000248":0.0,"5000249":0.0,"5000250":0.0,"5000251":0.0,"5000252":0.0,"5000253":0.0,"5000254":0.0,"5000255":0.0,"5000256":0.0,"5000257":0.0,"5000258":0.0,"5000259":0.0,"5000260":0.0,"5000261":0.0,"5000262":0.0,"5000263":0.0,"5000264":0.0,"5000265":0.0,"5000266":0.0,"5000267":0.0,"5000268":0.0,"5000269":0.0,"5000270":0.0,"5000271":0.0,"5000272":0.0,"5000273":0.0,"5000274":0.0,"5000275":0.0,"5000276":0.0,"5000277":0.0,"5000278":0.0,"5000279":0.0,"5000280":0.0,"5000281":0.0,"5000282":0.0,"5000283":0.0,"5000284":0.0,"5000285":0.0,"5000286":0.0,"5000287":0.0,"5000288":0.0,"5000289":0.0,"5000290":0.0,"5000291":0.0,"5000292":0.0,"5000293":0.0,"5000294":0.0,"5000295":0.0,"5000296":0.0,"5000297":0.0,"5000298":0.0,"5000299":0.0,"5000300":0.0,"5000301":0.0,"5000302":0.0,"5000303":0.0,"5000304":0.0,"5000305":0.0,"5000306":0.0,"5000307":0.0,"5000308":0.0,"5000309":0.0,"5000310":0.0,"5000311":0.0,"5000312":0.0,"5000313":0.0,"5000314":0.0,"5000315":0.0,"5000316":0.0,"5000317":0.0,"5000318":0.0,"5000319":0.0,"5000320":0.0,"5000321":0.0,"5000322":0.0,"5000323":0.0,"5000324":0.0,"5000325":0.0,"5000326":0.0,"5000327":0.0,"5000328":0.0,"5000329":0.0,"5000330":0.0,"5000331":0.0,"5000332":0.0,"5000333":0.0,"5000334":0.0,"5000335":0.0,"5000336":0.0,"5000337":0.0,"5000338":0.0,"5000339":0.0,"5000340":0.0,"5000341":0.0,"5000342":0.0,"5000343":0.0,"5000344":0.0,"5000345":0.0,"5000346":0.0,"5000347":0.0,"5000348":0.0,"5000349":0.0,"5000350":0.0,"5000351":0.0,"5000352":0.0,"5000353":0.0,"5000354":0.0,"5000355":0.0,"5000356":0.0,"5000357":0.0,"5000358":0.0,"5000359":0.0,"5000360":0.0,"5000361":0.0,"5000362":0.0,"5000363":0.0,"5000364":0.0,"5000365":0.0,"5000366":0.0,"5000367":0.0,"5000368":0.0,"5000369":0.0,"5000370":0.0,"5000371":0.0,"5000372":0.0,"5000373":0.0,"5000374":0.0,"5000375":0.0,"5000376":0.0,"5000377":0.0,"5000378":0.0,"5000379":0.0,"5000380":0.0,"5000381":0.0,"5000382":0.0,"5000383":0.0,"5000384":0.0,"5000385":0.0,"5000386":0.0,"5000387":0.0,"5000388":0.0,"5000389":0.0,"5000390":0.0,"5000391":0.0,"5000392":0.0,"5000393":0.0,"5000394":0.0,"5000395":0.0,"5000396":0.0,"5000397":0.0,"5000398":0.0,"5000399":0.0,"5000400":0.0,"5000401":0.0,"5000402":0.0,"5000403":0.0,"5000404":0.0,"5000405":0.0,"5000406":0.0,"5000407":0.0,"5000408":0.0,"5000409":0.0,"5000410":0.0,"5000411":0.0,"5000412":0.0,"5000413":0.0,"5000414":0.0,"5000415":0.0,"5000416":0.0,"5000417":0.0,"5000418":0.0,"5000419":0.0,"5000420":0.0,"5000421":0.0,"5000422":0.0,"5000423":0.0,"5000424":0.0,"5000425":0.0,"5000426":0.0,"5000427":0.0,"5000428":0.0,"5000429":0.0,"5000430":0.0,"5000431":0.0,"5000432":0.0,"5000433":0.0,"5000434":0.0,"5000435":0.0,"5000436":0.0,"5000437":0.0,"5000438":0.0,"5000439":0.0,"5000440":0.0,"5000441":0.0,"5000442":0.0,"5000443":0.0,"5000444":0.0,"5000445":0.0,"5000446":0.0,"5000447":0.0,"5000448":0.0,"5000449":0.0,"5000450":0.0,"5000451":0.0,"5000452":0.0,"5000453":0.0,"5000454":0.0,"5000455":0.0,"5000456":0.0,"5000457":0.0,"5000458":0.0,"5000459":0.0,"5000460":0.0,"5000461":0.0,"5000462":0.0,"5000463":0.0,"5000464":0.0,"5000465":0.0,"5000466":0.0,"5000467":0.0,"5000468":0.0,"5000469":0.0,"5000470":0.0,"5000471":0.0,"5000472":0.0,"5000473":0.0,"5000474":0.0,"5000475":0.0,"5000476":0.0,"5000477":0.0,"5000478":0.0,"5000479":0.0,"5000480":0.0,"5000481":0.0,"5000482":0.0,"5000483":0.0,"5000484":0.0,"5000485":0.0,"5000486":0.0,"5000487":0.0,"5000488":0.0,"5000489":0.0,"5000490":0.0,"5000491":0.0,"5000492":0.0,"5000493":0.0,"5000494":0.0,"5000495":0.0,"5000496":0.0,"5000497":0.0,"5000498":0.0,"5000499":0.0,"5000500":0.0,"5000501":0.0,"5000502":0.0,"5000503":0.0,"5000504":0.0,"5000505":0.0,"5000506":0.0,"5000507":0.0,"5000508":0.0,"5000509":0.0,"5000510":0.0,"5000511":0.0,"5000512":0.0,"5000513":0.0,"5000514":0.0,"5000515":0.0,"5000516":0.0,"5000517":0.0,"5000518":0.0,"5000519":0.0,"5000520":0.0,"5000521":0.0,"5000522":0.0,"5000523":0.0,"5000524":0.0,"5000525":0.0,"5000526":0.0,"5000527":0.0,"5000528":0.0,"5000529":0.0,"5000530":0.0,"5000531":0.0,"5000532":0.0,"5000533":0.0,"5000534":0.0,"5000535":0.0,"5000536":0.0,"5000537":0.0,"5000538":0.0,"5000539":0.0,"5000540":0.0,"5000541":0.0,"5000542":0.0,"5000543":0.0,"5000544":0.0,"5000545":0.0,"5000546":0.0,"5000547":0.0,"5000548":0.0,"5000549":0.0,"5000550":0.0,"5000551":0.0,"5000552":0.0,"5000553":0.0,"5000554":0.0,"5000555":0.0,"5000556":0.0,"5000557":0.0,"5000558":0.0,"5000559":0.0,"5000560":0.0,"5000561":0.0,"5000562":0.0,"5000563":0.0,"5000564":0.0,"5000565":0.0,"5000566":0.0,"5000567":0.0,"5000568":0.0,"5000569":0.0,"5000570":0.0,"5000571":0.0,"5000572":0.0,"5000573":0.0,"5000574":0.0,"5000575":0.0,"5000576":0.0,"5000577":0.0,"5000578":0.0,"5000579":0.0,"5000580":0.0,"5000581":0.0,"5000582":0.0,"5000583":0.0,"5000584":0.0,"5000585":0.0,"5000586":0.0,"5000587":0.0,"5000588":0.0,"5000589":0.0,"5000590":0.0,"5000591":0.0,"5000592":0.0,"5000593":0.0,"5000594":0.0,"5000595":0.0,"5000596":0.0,"5000597":0.0,"5000598":0.0,"5000599":0.0,"5000600":0.0,"5000601":0.0,"5000602":0.0,"5000603":0.0,"5000604":0.0,"5000605":0.0,"5000606":0.0,"5000607":0.0,"5000608":0.0,"5000609":0.0,"5000610":0.0,"5000611":0.0,"5000612":0.0,"5000613":0.0,"5000614":0.0,"5000615":0.0,"5000616":0.0,"5000617":0.0,"5000618":0.0,"5000619":0.0,"5000620":0.0,"5000621":0.0,"5000622":0.0,"5000623":0.0,"5000624":0.0,"5000625":0.0,"5000626":0.0,"5000627":0.0,"5000628":0.0,"5000629":0.0,"5000630":0.0,"5000631":0.0,"5000632":0.0,"5000633":0.0,"5000634":0.0,"5000635":0.0,"5000636":0.0,"5000637":0.0,"5000638":0.0,"5000639":0.0,"5000640":0.0,"5000641":0.0,"5000642":0.0,"5000643":0.0,"5000644":0.0,"5000645":0.0,"5000646":0.0,"5000647":0.0,"5000648":0.0,"5000649":0.0,"5000650":0.0,"5000651":0.0,"5000652":0.0,"5000653":0.0,"5000654":0.0,"5000655":0.0,"5000656":0.0,"5000657":0.0,"5000658":0.0,"5000659":0.0,"5000660":0.0,"5000661":0.0,"5000662":0.0,"5000663":0.0,"5000664":0.0,"5000665":0.0,"5000666":0.0,"5000667":0.0,"5000668":0.0,"5000669":0.0,"5000670":0.0,"5000671":0.0,"5000672":0.0,"5000673":0.0,"5000674":0.0,"5000675":0.0,"5000676":0.0,"5000677":0.0,"5000678":0.0,"5000679":0.0,"5000680":0.0,"5000681":0.0,"5000682":0.0,"5000683":0.0,"5000684":0.0,"5000685":0.0,"5000686":0.0,"5000687":0.0,"5000688":0.0,"5000689":0.0,"5000690":0.0,"5000691":0.0,"5000692":0.0,"5000693":0.0,"5000694":0.0,"5000695":0.0,"5000696":0.0,"5000697":0.0,"5000698":0.0,"5000699":0.0,"5000700":0.0,"5000701":0.0,"5000702":0.0,"5000703":0.0,"5000704":0.0,"5000705":0.0,"5000706":0.0,"5000707":0.0,"5000708":0.0,"5000709":0.0,"5000710":0.0,"5000711":0.0,"5000712":0.0,"5000713":0.0,"5000714":0.0,"5000715":0.0,"5000716":0.0,"5000717":0.0,"5000718":0.0,"5000719":0.0,"5000720":0.0,"5000721":0.0,"5000722":0.0,"5000723":0.0,"5000724":0.0,"5000725":0.0,"5000726":0.0,"5000727":0.0,"5000728":0.0,"5000729":0.0,"5000730":0.0,"5000731":0.0,"5000732":0.0,"5000733":0.0,"5000734":0.0,"5000735":0.0,"5000736":0.0,"5000737":0.0,"5000738":0.0,"5000739":0.0,"5000740":0.0,"5000741":0.0,"5000742":0.0,"5000743":0.0,"5000744":0.0,"5000745":0.0,"5000746":0.0,"5000747":0.0,"5000748":0.0,"5000749":0.0,"5000750":0.0,"5000751":0.0,"5000752":0.0,"5000753":0.0,"5000754":0.0,"5000755":0.0,"5000756":0.0,"5000757":0.0,"5000758":0.0,"5000759":0.0,"5000760":0.0,"5000761":0.0,"5000762":0.0,"5000763":0.0,"5000764":0.0,"5000765":0.0,"5000766":0.0,"5000767":0.0,"5000768":0.0,"5000769":0.0,"5000770":0.0,"5000771":0.0,"5000772":0.0,"5000773":0.0,"5000774":0.0,"5000775":0.0,"5000776":0.0,"5000777":0.0,"5000778":0.0,"5000779":0.0,"5000780":0.0,"5000781":0.0,"5000782":0.0,"5000783":0.0,"5000784":0.0,"5000785":0.0,"5000786":0.0,"5000787":0.0,"5000788":0.0,"5000789":0.0,"5000790":0.0,"5000791":0.0,"5000792":0.0,"5000793":0.0,"5000794":0.0,"5000795":0.0,"5000796":0.0,"5000797":0.0,"5000798":0.0,"5000799":0.0,"5000800":0.0,"5000801":0.0,"5000802":0.0,"5000803":0.0,"5000804":0.0,"5000805":0.0,"5000806":0.0,"5000807":0.0,"5000808":0.0,"5000809":0.0,"5000810":0.0,"5000811":0.0,"5000812":0.0,"5000813":0.0,"5000814":0.0,"5000815":0.0,"5000816":0.0,"5000817":0.0,"5000818":0.0,"5000819":0.0,"5000820":0.0,"5000821":0.0,"5000822":0.0,"5000823":0.0,"5000824":0.0,"5000825":0.0,"5000826":0.0,"5000827":0.0,"5000828":0.0,"5000829":0.0,"5000830":0.0,"5000831":0.0,"5000832":0.0,"5000833":0.0,"5000834":0.0,"5000835":0.0,"5000836":0.0,"5000837":0.0,"5000838":0.0,"5000839":0.0,"5000840":0.0,"5000841":0.0,"5000842":0.0,"5000843":0.0,"5000844":0.0,"5000845":0.0,"5000846":0.0,"5000847":0.0,"5000848":0.0,"5000849":0.0,"5000850":0.0,"5000851":0.0,"5000852":0.0,"5000853":0.0,"5000854":0.0,"5000855":0.0,"5000856":0.0,"5000857":0.0,"5000858":0.0,"5000859":0.0,"5000860":0.0,"5000861":0.0,"5000862":0.0,"5000863":0.0,"5000864":0.0,"5000865":0.0,"5000866":0.0,"5000867":0.0,"5000868":0.0,"5000869":0.0,"5000870":0.0,"5000871":0.0,"5000872":0.0,"5000873":0.0,"5000874":0.0,"5000875":0.0,"5000876":0.0,"5000877":0.0,"5000878":0.0,"5000879":0.0,"5000880":0.0,"5000881":0.0,"5000882":0.0,"5000883":0.0,"5000884":0.0,"5000885":0.0,"5000886":0.0,"5000887":0.0,"5000888":0.0,"5000889":0.0,"5000890":0.0,"5000891":0.0,"5000892":0.0,"5000893":0.0,"5000894":0.0,"5000895":0.0,"5000896":0.0,"5000897":0.0,"5000898":0.0,"5000899":0.0,"5000900":0.0,"5000901":0.0,"5000902":0.0,"5000903":0.0,"5000904":0.0,"5000905":0.0,"5000906":0.0,"5000907":0.0,"5000908":0.0,"5000909":0.0,"5000910":0.0,"5000911":0.0,"5000912":0.0,"5000913":0.0,"5000914":0.0,"5000915":0.0,"5000916":0.0,"5000917":0.0,"5000918":0.0,"5000919":0.0,"5000920":0.0,"5000921":0.0,"5000922":0.0,"5000923":0.0,"5000924":0.0,"5000925":0.0,"5000926":0.0,"5000927":0.0,"5000928":0.0,"5000929":0.0,"5000930":0.0,"5000931":0.0,"5000932":0.0,"5000933":0.0,"5000934":0.0,"5000935":0.0,"5000936":0.0,"5000937":0.0,"5000938":0.0,"5000939":0.0,"5000940":0.0,"5000941":0.0,"5000942":0.0,"5000943":0.0,"5000944":0.0,"5000945":0.0,"5000946":0.0,"5000947":0.0,"5000948":0.0,"5000949":0.0,"5000950":0.0,"5000951":0.0,"5000952":0.0,"5000953":0.0,"5000954":0.0,"5000955":0.0,"5000956":0.0,"5000957":0.0,"5000958":0.0,"8500000":35.0,"9003018":2981.52,"9003019":0.0,"9003020":0.0,"9003021":178.0,"9003022":178.0,"9003023":56.0,"9003024":0.0,"9003025":0.0,"9003026":4612.0,"9003027":20.0,"9003028":59.32,"9003029":9.9,"9003030":119.01,"9003031":0.0,"9003032":0.0,"9003033":8.1,"9003034":17.08,"9003035":0.0,"9003036":0.0,"9003037":0.0,"9003038":0.0,"9003039":0.0,"9003040":0.0,"9003041":0.0,"9003042":0.0,"9003043":0.0,"9003044":0.0,"9003045":0.0,"9003046":0.0,"9003047":0.0,"9003048":0.0,"9003049":0.0,"9003050":0.0,"9003051":0.0,"9003052":0.0,"9003053":0.0,"9003054":0.0,"9003055":0.0,"9003056":0.0,"9003057":0.0,"9003058":0.0,"9003059":0.0,"9003060":0.0,"9003061":0.0,"9003062":0.0,"9003063":0.0,"9003064":0.0,"9003065":0.0,"9003066":0.0,"9003067":0.0,"9003068":0.0,"9003069":0.0,"9003070":985.96,"9003071":1048.25,"9003072":0.0,"9003073":0.0,"9003074":0.0,"9003075":0.0,"9003076":0.0,"9003077":0.0,"9003078":0.0,"9003079":0.0,"9003080":0.0,"9003081":0.0,"9003082":0.0,"9003083":0.0,"9003084":0.0,"9003085":0.0,"9003086":0.0,"9003087":0.0,"9003088":0.0,"9003089":326.0,"9003090":1815.0,"9003091":1782.0,"9003092":0.0,"9003093":318.18,"9003094":0.0,"9003095":195.0,"9003096":252.0,"9003097":0.0,"9003098":0.0,"9003099":261.0,"9003100":555.0,"9003101":0.0,"9003102":130.0,"9003103":103.0,"9003104":0.0,"9003105":0.0,"9003106":0.0,"9003107":0.0,"9003108":0.0,"9003109":0.0,"9003110":178.0,"9003111":0.0,"9003112":0.0,"9003113":0.0,"9003114":0.0,"9003115":0.0,"9003116":210.0,"9003117":0.0,"9003118":0.0,"9003119":0.0,"9003120":0.0,"9003121":0.0,"9003122":0.0,"9003123":54.0,"9003124":0.0,"9003125":618.0,"9003126":0.0,"9003127":67.0,"9003128":0.0,"9003129":454.0,"9003130":0.0,"9003131":533.0,"9003132":216.0,"9003133":0.0,"9003134":80.0,"9003135":0.0,"9003136":0.0,"9003137":0.0,"9003138":0.0,"9003139":3.84,"9003140":0.0,"9003141":5.83,"9003142":18.13,"9003143":97.74,"9003144":0.0,"9003145":0.0,"9003146":0.0,"9003147":2000.96,"9003148":148.96,"9003149":0.0,"9003150":0.0,"9003151":0.0,"9003152":18.0,"9003153":18.0,"9003154":1010.42,"9003155":1103.0,"9003156":926.88,"9003157":422.81,"9003158":338.59,"9003159":0.0,"9003160":0.0,"9003161":0.0,"9003162":415.0,"9003163":307.55,"9003164":125.0,"9003165":0.0,"9003166":413.0,"9003167":0.0,"9003168":369.13,"9003169":0.0,"9003170":376.91,"9003171":0.0,"9003172":113.27,"9003173":114.76,"9003174":3597.14,"9003175":472.92,"9003176":125.88,"9003177":124.22,"9003178":1507.39,"9003179":1507.39,"9003180":1343.96,"9003181":0.0,"9003182":0.0,"9003183":520.0,"9003184":1940.53,"9003185":215.0,"9003186":528.5,"9003187":514.29,"9003188":0.0,"9003189":0.0,"9003190":0.0,"9003191":448.62,"9003192":130.0,"9003193":0.0,"9003194":244.48,"9003195":0.0,"9003196":0.0,"9003197":0.0,"9003198":0.0,"9003199":0.0,"9003200":0.0,"9003201":0.0,"9003202":0.0,"9003203":0.0,"9003204":0.0,"9003205":0.0,"9003206":0.0,"9003207":0.0,"9003208":0.0,"9003209":0.0,"9003210":0.0,"9003211":0.0,"9003212":0.0,"9003213":0.0,"9003214":0.0,"9003215":0.0,"9003216":0.0,"9003217":0.0,"9003218":0.0,"9003219":0.0,"9003220":0.0,"9003221":0.0,"9003222":0.0,"9003223":0.0,"9003224":0.0,"9003225":0.0,"9003226":0.0,"9003227":0.0,"9003228":0.0,"9003229":0.0,"9003230":0.0,"9003231":0.0,"9003232":58.0,"9003233":749.33,"9003234":0.0,"9003235":45.82,"9003236":128.57,"9003237":0.0,"9003238":21.13,"9003239":0.0,"9003240":0.0,"9003241":125.0,"9003242":0.0,"9003243":0.0,"9003244":0.0,"9003245":0.0,"9003246":0.0,"9003247":0.0,"9003248":567.0,"9003249":3.91,"9003250":3.04,"9003251":0.0,"9003252":17.2,"9003253":8.34,"9003254":145.0,"9003255":89.0,"9003256":78.0,"9003257":10.0,"9003258":182.0,"9003259":0.0,"9003260":254.0,"9003261":0.0,"9003262":42.0,"9003263":0.0,"9003264":0.0,"9003265":0.0,"9003266":104.5,"9003267":82.4,"9003268":888.0,"9003269":0.0,"9003270":0.0,"9003271":808.81,"9003272":86.0,"9003273":550.0,"9003274":398.2,"9003275":398.2,"9003276":0.0,"9003277":226.01,"9003278":192.11,"9003279":0.0,"9003280":7.56,"9003281":749.33,"9003282":92.67,"9003283":240.0,"9003284":240.0,"9003285":135.0,"9003286":0.0,"9003287":203.13,"9003288":91.05,"9003289":91.05,"9003290":235.58,"9003291":24.47,"9003292":195.0,"9003293":82.92,"9003294":2741.18,"9003295":0.0,"9003296":168.0,"9003297":0.0,"9003298":0.0,"9003299":1576.47,"9003300":0.0,"9003301":3.44,"9003302":566.0,"9003303":238.26,"9003304":0.0,"9003305":12.82,"9003306":0.0,"9003307":0.0,"9003308":0.0,"9003309":4.0,"9003310":0.0,"9003311":0.0,"9003312":0.0,"9003313":6.0,"9003314":8.0,"9003315":0.0,"9003316":1.23,"9003317":0.67,"9003318":1.37,"9003319":4.87,"9003320":0.0,"9003321":2.81,"9003322":2.41,"9003323":3.02,"9003324":2.0,"9003325":1.82,"9003326":1.41,"9003327":3.86,"9003328":1.01,"9003329":19.0,"9003330":0.0,"9003331":0.0,"9003332":0.0,"9003333":0.0,"9003334":0.0,"9003335":3.21,"9003336":33.27,"9003337":722.0,"9003338":210.0,"9003339":3.0,"9003340":0.0,"9003341":100.0,"9003342":84.0,"9003343":252.0,"9003344":0.0,"9003345":0.0,"9003346":0.0,"9003347":0.0,"9003348":898.0,"9003349":690.0,"9003350":227.05,"9003351":3750.77,"9003352":273.86,"9003353":164.22,"9003354":3.86,"9003355":184.0,"9003356":26.61,"9003357":26.61,"9003358":0.0,"9003359":0.0,"9003360":181.87,"9003361":332.0,"9003362":0.0,"9003363":0.0,"9003364":0.0,"9003365":130.0,"9003366":1084.76,"9003367":0.0,"9003368":104.12,"9003369":785.71,"9003370":172.1,"9003371":76.83,"9003372":0.0,"9003373":629.0,"9003374":112.71,"9003375":58.45,"9003376":7.84,"9003377":22.92,"9003378":173.85,"9003379":0.0,"9003380":0.0,"9003381":0.0,"9003382":0.0,"9003383":171.0,"9003384":0.0,"9003385":0.0,"9003386":766.88,"9003387":0.0,"9003388":0.0,"9003389":67.32,"9003390":6.43,"9003391":0.0,"9003392":88.7,"9003393":340.24,"9003394":130.98,"9003395":0.0,"9003396":50.05,"9003397":50.0,"9003398":58.0,"9003399":976.31,"9003400":0.0,"9003401":0.0,"9003402":53.74,"9003403":30.74,"9003404":0.0,"9003405":452.88,"9003406":82.87,"9003407":0.0,"9003408":606.56,"9003409":1940.53,"9003410":273.52,"9003411":1851.65,"9003412":0.0,"9003413":452.0,"9003414":0.0,"9003415":449.0,"9003416":0.0,"9003417":300.07,"9003418":1050.48};
+
 var calcState = {
   expr:      '',      // full expression string e.g. "6*24+"
   display:   '0',     // current number being typed
