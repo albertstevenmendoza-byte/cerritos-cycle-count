@@ -294,6 +294,55 @@ input::placeholder{color:var(--ink-3)}
 /* TOAST */
 #toast{position:fixed;bottom:1.25rem;left:50%;transform:translateX(-50%) translateY(8px);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:99px;font-size:12px;font-weight:600;font-family:var(--sans);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:9999;white-space:nowrap;max-width:calc(100vw - 2rem);box-shadow:0 4px 16px rgba(0,0,0,.25)}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── Calculator ───────────────────────────────────────────── */
+.calc-overlay{position:fixed;inset:0;z-index:9100;background:rgba(0,0,0,.45);
+  backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+  display:flex;align-items:flex-end;justify-content:center;
+  animation:fadeIn .15s ease both}
+.calc-sheet{background:var(--surface);border-radius:var(--r-lg) var(--r-lg) 0 0;
+  width:100%;max-width:420px;padding-bottom:env(safe-area-inset-bottom);
+  box-shadow:0 -8px 48px rgba(0,0,0,.25);
+  animation:slideSheet .22s cubic-bezier(.16,.8,.4,1) both}
+@media(min-width:480px){
+  .calc-overlay{align-items:center}
+  .calc-sheet{border-radius:var(--r-lg);max-width:360px;padding-bottom:0}
+}
+.calc-header{padding:.75rem 1rem .5rem;display:flex;align-items:center;justify-content:space-between}
+.calc-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3)}
+.calc-close{width:28px;height:28px;background:var(--surface-2);border:1px solid var(--line-med);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;color:var(--ink-3);font-size:16px;line-height:1;
+  -webkit-tap-highlight-color:transparent}
+.calc-close:hover{background:var(--surface-3)}
+.calc-display{margin:0 1rem .75rem;background:var(--surface-2);border:1.5px solid var(--line-med);
+  border-radius:var(--r);padding:.6rem .85rem;min-height:64px;
+  display:flex;flex-direction:column;justify-content:space-between}
+.calc-expr{font-family:var(--mono);font-size:13px;color:var(--ink-3);
+  min-height:18px;word-break:break-all;text-align:right}
+.calc-result{font-family:var(--mono);font-size:28px;font-weight:700;
+  color:var(--ink);text-align:right;line-height:1.1}
+.calc-result.error{color:var(--bad);font-size:16px}
+.calc-keys{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:0 1rem 1rem}
+.calc-key{height:58px;border:none;border-radius:var(--r);
+  font-size:18px;font-weight:600;font-family:var(--sans);
+  cursor:pointer;transition:all .1s;-webkit-tap-highlight-color:transparent;
+  display:flex;align-items:center;justify-content:center;touch-action:manipulation}
+.calc-key:active{transform:scale(.93)}
+.k-num{background:var(--surface-2);color:var(--ink);border:1px solid var(--line)}
+.k-num:hover{background:var(--surface-3)}
+.k-op{background:var(--gold-lt);color:var(--gold-dk);border:1px solid rgba(200,146,42,.25);font-size:22px}
+.k-op:hover{background:rgba(200,146,42,.2)}
+.k-op.k-active{background:var(--gold);color:#fff;border-color:var(--gold)}
+.k-del{background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line);font-size:16px}
+.k-del:hover{background:var(--bad-bg);color:var(--bad)}
+.k-clear{background:var(--surface-2);color:var(--bad);border:1px solid var(--bad-line);font-size:14px;font-weight:700}
+.k-clear:hover{background:var(--bad-bg)}
+.k-confirm{background:var(--gold);color:#fff;border:none;font-size:15px;font-weight:700;grid-column:span 2}
+.k-confirm:hover{background:var(--gold-dk)}
+.k-confirm:disabled{background:var(--surface-3);color:var(--ink-3);cursor:not-allowed}
+.calc-mode-note{text-align:center;font-size:11px;color:var(--ink-3);
+  padding:.1rem 1rem .75rem;font-family:var(--mono)}
   </style>
 </head>
 <body>
@@ -477,6 +526,52 @@ input::placeholder{color:var(--ink-3)}
 <div id="photo-modal" class="photo-modal-overlay" style="display:none;" onclick="closePhotoModal()">
   <img id="photo-modal-img" src="" alt="Photo"/>
 </div>
+
+<!-- Calculator -->
+<div id="calc-overlay" class="calc-overlay" style="display:none;" onclick="onCalcOverlayClick(event)">
+  <div class="calc-sheet">
+    <div class="calc-header">
+      <span class="calc-title">Calculator</span>
+      <button class="calc-close" onclick="closeCalc()">&times;</button>
+    </div>
+    <div class="calc-display">
+      <div class="calc-expr"  id="calc-expr"></div>
+      <div class="calc-result" id="calc-result">0</div>
+    </div>
+    <div class="calc-mode-note" id="calc-mode-note"></div>
+    <div class="calc-keys">
+      <button class="calc-key k-clear"  onclick="calcClear()">AC</button>
+      <button class="calc-key k-op"     onclick="calcOp('%')">%</button>
+      <button class="calc-key k-del"    onclick="calcDel()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 4H8l-7 8 7 8h13a2 2 0 002-2V6a2 2 0 00-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg>
+      </button>
+      <button class="calc-key k-op"     onclick="calcOp('/')">&#xF7;</button>
+
+      <button class="calc-key k-num"    onclick="calcDigit('7')">7</button>
+      <button class="calc-key k-num"    onclick="calcDigit('8')">8</button>
+      <button class="calc-key k-num"    onclick="calcDigit('9')">9</button>
+      <button class="calc-key k-op"     onclick="calcOp('*')">&#xD7;</button>
+
+      <button class="calc-key k-num"    onclick="calcDigit('4')">4</button>
+      <button class="calc-key k-num"    onclick="calcDigit('5')">5</button>
+      <button class="calc-key k-num"    onclick="calcDigit('6')">6</button>
+      <button class="calc-key k-op"     onclick="calcOp('-')">&#x2212;</button>
+
+      <button class="calc-key k-num"    onclick="calcDigit('1')">1</button>
+      <button class="calc-key k-num"    onclick="calcDigit('2')">2</button>
+      <button class="calc-key k-num"    onclick="calcDigit('3')">3</button>
+      <button class="calc-key k-op"     onclick="calcOp('+')">+</button>
+
+      <button class="calc-key k-num"    onclick="calcDigit('0')" style="grid-column:span 2">0</button>
+      <button class="calc-key k-num"    onclick="calcDigit('.')">.</button>
+      <button class="calc-key k-op"     onclick="calcEquals()">=</button>
+
+      <button class="calc-key k-confirm" id="calc-use-btn" onclick="calcUse()" disabled>Use Result</button>
+      <button class="calc-key k-del"    onclick="closeCalc()" style="font-size:13px">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -949,10 +1044,18 @@ function renderGroups() {
             + '<div id="chip-'+id+'">'+chip(phys,sap)+'</div>'
             + '</div>'
             + '<div class="row-right">'
+            + '<div style="display:flex;gap:4px;align-items:center">'
             + '<input class="row-qty qty-input'+mc+'" type="text" inputmode="decimal" placeholder="qty" value=""'
             + ' oninput="dirtyInputs.add('+id+')"'
             + ' onkeydown="onQtyKeydown(event,'+id+',this)"'
-            + ' onblur="onQtyBlur('+id+',this)"/>'
+            + ' onblur="onQtyBlur('+id+',this)"'
+            + ' id="qi-'+id+'"/>'
+            + '<button onclick="openCalc('+id+',document.getElementById(&quot;qi-'+id+'&quot;))" '
+            + ' style="width:38px;height:38px;flex-shrink:0;background:var(--surface-2);border:1.5px solid var(--line-med);border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-3);-webkit-tap-highlight-color:transparent" '
+            + ' title="Calculator">'
+            + '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="8" y2="10"/><line x1="12" y1="10" x2="12" y2="10"/><line x1="16" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/><line x1="12" y1="14" x2="12" y2="14"/><line x1="16" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg>'
+            + '</button>'
+            + '</div>'
             + '<span class="row-var '+vi.cls+'" id="rv-'+id+'">'+vi.text+'</span>'
             + '</div>'
             + '</div>'
@@ -1339,6 +1442,152 @@ async function confirmAddItem() {
   closeAddItemForm();
   renderAll();
   showToast('Added: '+desc+' ('+id+')');
+}
+
+/* ─── Calculator ────────────────────────────────────────── */
+var calcState = {
+  expr:      '',      // full expression string e.g. "6*24+"
+  display:   '0',     // current number being typed
+  operator:  null,    // pending operator
+  operand:   null,    // left-hand operand
+  fresh:     true,    // true = next digit starts a new number
+  result:    null,    // last evaluated result
+  targetId:  null,    // material_id this calc is for
+  targetEl:  null     // the input element to fill
+};
+
+function openCalc(materialId, inputEl) {
+  var s = calcState;
+  s.expr=''; s.display='0'; s.operator=null; s.operand=null;
+  s.fresh=true; s.result=null;
+  s.targetId = materialId;
+  s.targetEl = inputEl;
+
+  /* Pre-fill if input already has a value */
+  var pre = inputEl.value.trim();
+  if (pre && /^-?\d+(\.\d+)?$/.test(pre)) {
+    s.display = pre; s.fresh = true; s.result = parseFloat(pre);
+  }
+
+  updateCalcDisplay();
+  var note = document.getElementById('calc-mode-note');
+  if (note) note.textContent = entryMode === 'set'
+    ? '= Set mode — result replaces count'
+    : (subtractMode ? '− Subtract mode — result will be negated' : '+ Add mode — result adds to running total');
+
+  document.getElementById('calc-overlay').style.display = 'flex';
+}
+
+function closeCalc() {
+  document.getElementById('calc-overlay').style.display = 'none';
+}
+
+function onCalcOverlayClick(e) {
+  if (e.target === document.getElementById('calc-overlay')) closeCalc();
+}
+
+function updateCalcDisplay() {
+  var s = calcState;
+  var exprEl   = document.getElementById('calc-expr');
+  var resultEl = document.getElementById('calc-result');
+  var useBtn   = document.getElementById('calc-use-btn');
+  if (exprEl)   exprEl.textContent   = s.expr || '';
+  if (resultEl) { resultEl.textContent = s.display; resultEl.className = 'calc-result'; }
+  if (useBtn)   useBtn.disabled = (s.result === null && s.display === '0');
+
+  /* Highlight active operator button */
+  document.querySelectorAll('.k-op').forEach(function(b) { b.classList.remove('k-active'); });
+  if (s.operator) {
+    var opMap = {'+':'+', '-':'&#x2212;', '*':'&#xD7;', '/':'&#xF7;', '%':'%'};
+    document.querySelectorAll('.k-op').forEach(function(b) {
+      if (b.textContent.trim() === s.operator ||
+          b.innerHTML.trim() === (opMap[s.operator]||'')) b.classList.add('k-active');
+    });
+  }
+}
+
+function calcDigit(d) {
+  var s = calcState;
+  if (s.fresh) { s.display = (d === '.' ? '0.' : d); s.fresh = false; }
+  else {
+    if (d === '.' && s.display.includes('.')) return;
+    if (s.display === '0' && d !== '.') s.display = d;
+    else s.display += d;
+  }
+  s.result = parseFloat(s.display);
+  updateCalcDisplay();
+}
+
+function calcOp(op) {
+  var s = calcState;
+  /* If there's a pending operator, evaluate first */
+  if (s.operator && !s.fresh) calcEquals(true);
+  s.operand  = parseFloat(s.display);
+  s.operator = op;
+  s.expr     = s.display + ' ' + opSymbol(op) + ' ';
+  s.fresh    = true;
+  updateCalcDisplay();
+}
+
+function calcEquals(silent) {
+  var s = calcState;
+  if (s.operator === null || s.operand === null) {
+    s.result = parseFloat(s.display) || 0;
+    updateCalcDisplay();
+    return;
+  }
+  var a = s.operand, b = parseFloat(s.display), res;
+  if (s.operator === '+') res = a + b;
+  else if (s.operator === '-') res = a - b;
+  else if (s.operator === '*') res = a * b;
+  else if (s.operator === '/') res = b !== 0 ? a / b : NaN;
+  else if (s.operator === '%') res = a * (b / 100);
+
+  s.expr     = s.expr + s.display + ' =';
+  s.display  = isNaN(res) ? 'Error' : String(Math.round(res * 10000) / 10000);
+  s.result   = isNaN(res) ? null : res;
+  s.operator = null;
+  s.operand  = null;
+  s.fresh    = true;
+
+  var resultEl = document.getElementById('calc-result');
+  if (resultEl) resultEl.className = 'calc-result' + (isNaN(res) ? ' error' : '');
+  if (!silent) updateCalcDisplay();
+  document.getElementById('calc-use-btn').disabled = (s.result === null);
+}
+
+function calcDel() {
+  var s = calcState;
+  if (s.fresh || s.display.length <= 1) { s.display = '0'; s.fresh = true; }
+  else { s.display = s.display.slice(0, -1) || '0'; }
+  s.result = parseFloat(s.display) || null;
+  updateCalcDisplay();
+}
+
+function calcClear() {
+  var s = calcState;
+  s.expr=''; s.display='0'; s.operator=null;
+  s.operand=null; s.fresh=true; s.result=null;
+  updateCalcDisplay();
+  document.getElementById('calc-use-btn').disabled = true;
+}
+
+function calcUse() {
+  var s = calcState;
+  if (s.result === null) return;
+  /* Round to integer for inventory counts */
+  var val = Math.round(s.result);
+  closeCalc();
+  if (s.targetEl) {
+    s.targetEl.value = String(val);
+    dirtyInputs.add(s.targetId);
+    /* Trigger the blur logic */
+    s.targetEl.dispatchEvent(new Event('blur'));
+  }
+}
+
+function opSymbol(op) {
+  return {'+':'+', '-':'−', '*':'×', '/':'÷', '%':'%'}[op] || op;
 }
 
 function goBack() {
