@@ -1299,6 +1299,25 @@ async function clearAllData() {
 }
 
 
+/* ─── Totals tab helpers ───────────────────────────────── */
+function fmt$(n){ return (n>=0?'+$':'-$')+Math.abs(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtUSD(n){ return '$'+n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+/* ─── Variance row renderer (used by renderTotals) ─────── */
+function varRow(x) {
+  var sign = x.diff>0?'+':'';
+  var vcls = x.diff>0?'pos':'neg';
+  var dImp = x.dollarImpact!=null ? ((x.dollarImpact>=0?'+$':'-$')+Math.abs(x.dollarImpact).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})) : '—';
+  var dCls = x.dollarImpact==null?'ri-dollar-na':x.dollarImpact>0?'ri-dollar-pos':'ri-dollar-neg';
+  return '<div class="result-item">'
+    +'<div class="ri-desc">'+esc(x.desc)+'</div>'
+    +'<div class="ri-dollar '+dCls+'">'+dImp+'</div>'
+    +'<div class="ri-qtys ri-id">'+x.id+' &middot; SAP '+x.sap.toLocaleString()+' &rarr; Counted '+x.phys.toLocaleString()
+    +(x.cost>0?' &middot; $'+x.cost.toFixed(4)+'/unit':'')+' </div>'
+    +'<div class="ri-var '+vcls+'">'+sign+x.diff.toLocaleString()+'</div>'
+    +'</div>';
+}
+
 function renderTotals() {
   var total=MATERIALS.length, counted=Object.keys(counts).length;
   var remain=total-counted, pct=total?Math.round(counted/total*100):0, allDone=remain===0&&total>0;
@@ -1354,8 +1373,7 @@ function renderTotals() {
   var shortCost   = shortItems.reduce(function(s,x){return s+(x.dollarImpact||0);},0);
   var costWithVar = withVar.filter(function(x){return x.dollarImpact!=null;});
 
-  function fmt$(n){ return (n>=0?'+$':'-$')+Math.abs(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
-  function fmtUSD(n){ return '$'+n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
 
   /* ── HTML ── */
   var html = '';
@@ -1433,20 +1451,6 @@ function renderTotals() {
     .sort(function(a,b){ return b.diff - a.diff; });
   var negItems  = withVar.filter(function(x){ return x.diff < 0; })
     .sort(function(a,b){ return a.diff - b.diff; });
-
-  function varRow(x) {
-    var sign = x.diff>0?'+':'';
-    var vcls = x.diff>0?'pos':'neg';
-    var dImp = x.dollarImpact!=null ? fmt$(x.dollarImpact) : '—';
-    var dCls = x.dollarImpact==null?'ri-dollar-na':x.dollarImpact>0?'ri-dollar-pos':'ri-dollar-neg';
-    return '<div class="result-item">'
-      +'<div class="ri-desc">'+esc(x.desc)+'</div>'
-      +'<div class="ri-dollar '+dCls+'">'+dImp+'</div>'
-      +'<div class="ri-qtys ri-id">'+x.id+' &middot; SAP '+x.sap.toLocaleString()+' &rarr; Counted '+x.phys.toLocaleString()
-      +(x.cost>0?' &middot; $'+x.cost.toFixed(4)+'/unit':'')+' </div>'
-      +'<div class="ri-var '+vcls+'">'+sign+x.diff.toLocaleString()+'</div>'
-      +'</div>';
-  }
 
   /* Top 10 Positive */
   html += '<div>'
