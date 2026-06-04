@@ -4,705 +4,1083 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Cerritos Physical Count — 17AG</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
-    /* ── Reset ──────────────────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --amber:       #B87C20;
-      --amber-dk:    #9A6816;
-      --amber-lt:    #F5E4C3;
-      --bg:          #F4F3F0;
-      --surface:     #FFFFFF;
-      --surface-2:   #F0EFEB;
-      --border:      rgba(0,0,0,0.09);
-      --border-med:  rgba(0,0,0,0.16);
-      --text:        #1A1A18;
-      --text-2:      #6B6B67;
-      --text-3:      #A8A8A4;
-      --ok:          #2A7A3B;
-      --ok-bg:       #EAF3DE;
-      --bad:         #A32D2D;
-      --bad-bg:      #FCEBEB;
-      --info:        #185FA5;
-      --info-bg:     #E6F1FB;
-      --mono:        'Courier New', Courier, monospace;
-      --r-sm:        6px;
-      --r-md:        10px;
-      --r-lg:        14px;
-      --tab-h:       52px;
-      --top-h:       52px;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg:        #1C1C1A;
-        --surface:   #242422;
-        --surface-2: #2E2E2C;
-        --border:    rgba(255,255,255,0.09);
-        --border-med:rgba(255,255,255,0.16);
-        --text:      #E8E8E4;
-        --text-2:    #9A9A96;
-        --text-3:    #6B6B67;
-        --amber-lt:  #3A2E14;
-        --ok-bg:     #162B14;
-        --bad-bg:    #2A1010;
-        --info-bg:   #0C2540;
-      }
-    }
-
-    html { height: 100%; }
-    body {
-      min-height: 100%;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-      font-size: 15px;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.5;
-      -webkit-text-size-adjust: 100%;
-    }
-
-    /* ══════════════════════════════════════════════════════
-       SETUP SCREEN
-    ══════════════════════════════════════════════════════ */
-    #setup-screen {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100dvh;
-      padding: 1.5rem;
-    }
-
-    .setup-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--r-lg);
-      padding: 2rem;
-      width: 100%;
-      max-width: 420px;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-    }
-
-    .setup-icon {
-      width: 46px; height: 46px;
-      background: var(--amber-lt);
-      border-radius: var(--r-md);
-      display: flex; align-items: center; justify-content: center;
-      margin-bottom: 1.25rem;
-    }
-
-    .setup-title { font-size: 20px; font-weight: 700; margin-bottom: 0.3rem; }
-    .setup-sub   { font-size: 13px; color: var(--text-2); margin-bottom: 1.75rem; line-height: 1.6; }
-
-    .field-label {
-      display: block;
-      font-size: 11px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.07em;
-      color: var(--text-3); margin-bottom: 6px;
-    }
-
-    input[type="text"], input[type="number"] {
-      width: 100%;
-      height: 44px;
-      padding: 0 12px;
-      background: var(--surface);
-      border: 1px solid var(--border-med);
-      border-radius: var(--r-sm);
-      font-size: 16px; /* 16px prevents iOS zoom */
-      color: var(--text);
-      font-family: inherit;
-      outline: none;
-      transition: border-color .15s, box-shadow .15s;
-      -webkit-appearance: none;
-      appearance: none;
-    }
-    input[type="text"]:focus, input[type="number"]:focus {
-      border-color: var(--amber);
-      box-shadow: 0 0 0 3px rgba(184,124,32,.15);
-    }
-    input[type="number"] {
-      text-align: right;
-      font-family: var(--mono);
-      font-size: 16px;
-    }
-
-    .divider { height: 1px; background: var(--border); margin: 1.5rem 0; }
-
-    /* Drop zone */
-    .drop-zone {
-      border: 1.5px dashed var(--border-med);
-      border-radius: var(--r-md);
-      padding: 1.5rem 1rem;
-      text-align: center;
-      cursor: pointer;
-      transition: border-color .15s, background .15s;
-      position: relative;
-    }
-    .drop-zone:hover, .drop-zone.dragover {
-      border-color: var(--amber);
-      background: var(--amber-lt);
-    }
-    .drop-zone input[type="file"] {
-      position: absolute; inset: 0;
-      opacity: 0; cursor: pointer;
-      width: 100%; height: 100%;
-    }
-    .drop-icon { width: 36px; height: 36px; margin: 0 auto .5rem; color: var(--text-3); }
-    .drop-primary   { font-size: 14px; font-weight: 500; color: var(--text-2); margin-bottom: 2px; }
-    .drop-secondary { font-size: 12px; color: var(--text-3); }
-
-    /* Status panel */
-    .mat-status {
-      border-radius: var(--r-md);
-      padding: .75rem 1rem;
-      font-size: 13px;
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      margin-top: .85rem;
-    }
-    .mat-status.loading { background: var(--surface-2); }
-    .mat-status.ready   { background: var(--ok-bg); }
-    .mat-status.error   { background: var(--bad-bg); }
-    .mat-status.parsed  { background: var(--info-bg); }
-    .mat-status-icon { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
-    .mat-status-body { flex: 1; }
-    .mat-status-title { font-weight: 700; margin-bottom: 2px; }
-    .mat-status-title.ready  { color: var(--ok); }
-    .mat-status-title.error  { color: var(--bad); }
-    .mat-status-title.parsed { color: var(--info); }
-    .mat-status-sub { font-size: 12px; color: var(--text-2); line-height: 1.5; }
-
-    /* Spinner */
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .spinner {
-      width: 16px; height: 16px;
-      border: 2px solid var(--border-med);
-      border-top-color: var(--amber);
-      border-radius: 50%;
-      animation: spin .7s linear infinite;
-      flex-shrink: 0;
-    }
-
-    /* Buttons */
-    .btn-primary {
-      width: 100%; height: 48px;
-      background: var(--amber); color: #fff;
-      border: none; border-radius: var(--r-sm);
-      font-size: 16px; font-weight: 700;
-      cursor: pointer; margin-top: 1.25rem;
-      transition: background .15s;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .btn-primary:hover    { background: var(--amber-dk); }
-    .btn-primary:disabled { background: var(--surface-2); color: var(--text-3); cursor: not-allowed; }
-
-    /* ══════════════════════════════════════════════════════
-       APP SHELL
-    ══════════════════════════════════════════════════════ */
-    #app { display: none; }
-
-    /* Top bar */
-    .top-bar {
-      position: sticky; top: 0; z-index: 200;
-      height: var(--top-h);
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 0 1rem;
-      display: flex; align-items: center; gap: .75rem;
-    }
-    .top-bar-title { font-size: 15px; font-weight: 700; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .top-bar-meta  { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-    .dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: var(--text-3); flex-shrink: 0;
-      transition: background .3s;
-    }
-    .dot.live   { background: var(--ok); }
-    .dot.error  { background: var(--bad); }
-    .dot.saving { background: var(--amber); animation: pulse 1s ease-in-out infinite; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
-    .conn-text { font-size: 12px; color: var(--text-2); }
-    .top-link {
-      background: none; border: none;
-      color: var(--info); font-size: 13px;
-      font-family: inherit; cursor: pointer; padding: 0;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    /* Tab bar */
-    .tab-bar {
-      position: sticky; top: var(--top-h); z-index: 190;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-    }
-    .tab-btn {
-      flex: 1; height: var(--tab-h);
-      background: none; border: none;
-      font-size: 14px; font-weight: 600;
-      color: var(--text-3); font-family: inherit;
-      cursor: pointer; position: relative;
-      transition: color .15s;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .tab-btn.active { color: var(--amber); }
-    .tab-btn.active::after {
-      content: '';
-      position: absolute; bottom: 0; left: 12%; right: 12%; height: 2px;
-      background: var(--amber); border-radius: 2px 2px 0 0;
-    }
-
-    /* ══════════════════════════════════════════════════════
-       COUNT TAB
-    ══════════════════════════════════════════════════════ */
-    #count-tab { display: block; }
-    #totals-tab { display: none; }
-
-    /* Sticky toolbar */
-    .count-toolbar {
-      position: sticky;
-      top: calc(var(--top-h) + var(--tab-h));
-      z-index: 150;
-      background: var(--bg);
-      padding: .75rem 1rem;
-      display: flex; flex-direction: column; gap: .5rem;
-      border-bottom: 1px solid var(--border);
-    }
-
-    #search-input { font-size: 16px; }
-
-    .filter-row { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
-    .filter-row::-webkit-scrollbar { display: none; }
-
-    .fbtn {
-      flex-shrink: 0;
-      height: 34px; padding: 0 14px;
-      background: var(--surface);
-      border: 1px solid var(--border-med);
-      border-radius: 99px;
-      font-size: 13px; font-weight: 500;
-      color: var(--text-2); font-family: inherit;
-      cursor: pointer; white-space: nowrap;
-      transition: background .12s, color .12s, border-color .12s;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .fbtn:hover  { background: var(--surface-2); }
-    .fbtn.active { background: var(--amber); border-color: var(--amber); color: #fff; }
-
-    .export-btn {
-      flex-shrink: 0;
-      height: 34px; padding: 0 14px;
-      background: var(--surface);
-      border: 1px solid var(--border-med);
-      border-radius: 99px;
-      font-size: 13px; font-weight: 500;
-      color: var(--text-2); font-family: inherit;
-      cursor: pointer; white-space: nowrap;
-      margin-left: auto;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .export-btn:hover { background: var(--surface-2); }
-
-    /* ── Group sections ───────────────────────────────── */
-    .group-section { border-bottom: 1px solid var(--border); }
-    .group-section:last-child { border-bottom: none; }
-
-    .group-header {
-      width: 100%;
-      display: flex; align-items: center; gap: 10px;
-      padding: .7rem 1rem;
-      background: var(--surface-2);
-      border: none; cursor: pointer; font-family: inherit;
-      text-align: left;
-      -webkit-tap-highlight-color: transparent;
-      transition: background .12s;
-    }
-    .group-header:hover { background: color-mix(in srgb, var(--surface-2) 85%, var(--border)); }
-
-    .gh-icon {
-      width: 28px; height: 28px; border-radius: var(--r-sm);
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0; font-size: 14px;
-    }
-    .gh-body  { flex: 1; min-width: 0; }
-    .gh-name  { font-size: 13px; font-weight: 700; color: var(--text); display: block; }
-    .gh-sub   { font-size: 11px; color: var(--text-3); margin-top: 1px; display: flex; align-items: center; gap: 6px; }
-
-    .gh-bar-wrap { flex: 1; max-width: 60px; height: 3px; background: var(--border-med); border-radius: 2px; overflow: hidden; }
-    .gh-bar-fill { height: 100%; background: var(--amber); border-radius: 2px; transition: width .4s ease; }
-
-    .gh-badge {
-      font-size: 11px; font-weight: 700;
-      background: var(--surface); border: 1px solid var(--border-med);
-      border-radius: 99px; padding: 1px 8px;
-      color: var(--text-2); flex-shrink: 0;
-    }
-    .gh-badge.done { background: var(--ok-bg); color: var(--ok); border-color: transparent; }
-
-    .gh-chevron {
-      font-size: 16px; color: var(--text-3);
-      flex-shrink: 0; transition: transform .2s;
-      width: 20px; text-align: center; line-height: 1;
-    }
-    .gh-chevron.collapsed { transform: rotate(-90deg); }
-
-    .group-items { background: var(--surface); }
-    .group-items.collapsed { display: none; }
-
-    /* ── Compact material rows ────────────────────────── */
-    .mat-row {
-      display: flex; align-items: center; gap: 10px;
-      padding: 9px 1rem;
-      border-bottom: 1px solid var(--border);
-      min-height: 58px;
-      transition: background .12s;
-    }
-    .mat-row:last-child { border-bottom: none; }
-    .mat-row.row-match    { background: color-mix(in srgb, var(--ok-bg)  35%, transparent); }
-    .mat-row.row-variance { background: color-mix(in srgb, var(--bad-bg) 35%, transparent); }
-
-    .row-dot {
-      width: 9px; height: 9px; border-radius: 50%;
-      flex-shrink: 0; background: var(--border-med);
-      transition: background .2s;
-    }
-    .row-dot.dot-ok  { background: var(--ok); }
-    .row-dot.dot-bad { background: var(--bad); }
-
-    .row-info { flex: 1; min-width: 0; }
-    .row-desc { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.3;
-                white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .row-meta { font-size: 11px; color: var(--text-3); margin-top: 2px; }
-
-    .row-right { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
-
-    .row-qty {
-      width: 82px; height: 36px;
-      padding: 0 8px; text-align: right;
-      font-family: var(--mono); font-size: 15px; font-weight: 700;
-      background: var(--surface-2);
-      border: 1.5px solid var(--border-med);
-      border-radius: var(--r-sm);
-      color: var(--text);
-      -webkit-appearance: none; appearance: none;
-      outline: none; transition: border-color .15s, box-shadow .15s;
-    }
-    .row-qty:focus {
-      border-color: var(--amber);
-      box-shadow: 0 0 0 3px rgba(184,124,32,.15);
-      background: var(--surface);
-    }
-    .row-var {
-      font-family: var(--mono); font-size: 11px; font-weight: 700;
-      text-align: right; white-space: nowrap;
-    }
-    .row-var.vb-none { color: var(--text-3); font-weight: 400; }
-    .row-var.vb-zero { color: var(--ok); }
-    .row-var.vb-pos  { color: var(--ok); }
-    .row-var.vb-neg  { color: var(--bad); }
-
-    /* Mobile list container */
-    .mat-list {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--r-lg);
-      margin: .75rem 1rem;
-      overflow: hidden;
-    }
-
-    /* Row count footer */
-    .list-footer {
-      padding: .6rem 1rem;
-      font-size: 12px; color: var(--text-3);
-      display: flex; justify-content: space-between;
-      border-top: 1px solid var(--border);
-      background: var(--surface);
-    }
-
-    .no-rows {
-      text-align: center; padding: 3rem 1rem;
-      color: var(--text-2); font-size: 14px;
-    }
-
-    /* ── Desktop table (shown >= 768px) ───────────────── */
-    .desktop-table-wrap { display: none; }
-
-    @media (min-width: 768px) {
-      .mat-list { display: none; }
-      .desktop-table-wrap {
-        display: block;
-        margin: .75rem 1rem;
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: var(--r-lg);
-        overflow: hidden;
-      }
-
-      .tbl-scroll { overflow-x: auto; }
-
-      table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 700px; }
-      thead tr { background: var(--surface-2); }
-      th {
-        padding: 9px 10px; text-align: left;
-        font-size: 10px; font-weight: 700;
-        text-transform: uppercase; letter-spacing: .07em;
-        color: var(--text-3); border-bottom: 1px solid var(--border);
-        white-space: nowrap;
-      }
-      th.r, td.r { text-align: right; }
-      td { padding: 6px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
-      tr:last-child td { border-bottom: none; }
-      tr.tr-match    td { background: color-mix(in srgb, var(--ok-bg)  40%, transparent); }
-      tr.tr-variance td { background: color-mix(in srgb, var(--bad-bg) 40%, transparent); }
-      tr:hover td { filter: brightness(.97); }
-      @media (prefers-color-scheme: dark) { tr:hover td { filter: brightness(1.05); } }
-
-      .t-mat  { font-family: var(--mono); font-size: 11px; color: var(--text-2); }
-      .t-desc { font-size: 12px; line-height: 1.35; max-width: 220px; word-break: break-word; }
-      .t-sap  { font-family: var(--mono); font-size: 12px; color: var(--text-2); }
-      .t-qty  { width: 88px; height: 32px; padding: 0 8px; font-family: var(--mono); font-size: 13px; border-radius: var(--r-sm); }
-      .t-notes { width: 115px; height: 30px; padding: 0 8px; font-size: 11px; border-radius: var(--r-sm); }
-      .t-var  { font-family: var(--mono); font-size: 12px; font-weight: 700; white-space: nowrap; }
-      .tv-none { color: var(--text-3); font-weight: 400; }
-      .tv-zero, .tv-pos { color: var(--ok); }
-      .tv-neg  { color: var(--bad); }
-      .t-by   { font-size: 11px; color: var(--text-2); white-space: nowrap; }
-      .t-time { font-size: 10px; color: var(--text-3); white-space: nowrap; }
-
-      .tbl-footer {
-        padding: 8px 12px; font-size: 11px; color: var(--text-3);
-        border-top: 1px solid var(--border); background: var(--surface-2);
-        display: flex; justify-content: space-between;
-      }
-    }
-
-    /* ══════════════════════════════════════════════════════
-       TOTALS TAB
-    ══════════════════════════════════════════════════════ */
-    .totals-content { padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
-
-    /* Progress card */
-    .progress-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--r-lg);
-      padding: 1.25rem;
-    }
-    .progress-card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text-3); margin-bottom: .85rem; }
-
-    .progress-bar-wrap { height: 10px; background: var(--surface-2); border-radius: 5px; overflow: hidden; margin-bottom: .85rem; }
-    .progress-bar-fill { height: 100%; background: var(--amber); border-radius: 5px; transition: width .5s ease; }
-
-    .progress-nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
-    .prog-num { text-align: center; }
-    .prog-num-val { font-size: 24px; font-weight: 700; display: block; }
-    .prog-num-val.amber { color: var(--amber); }
-    .prog-num-val.green { color: var(--ok); }
-    .prog-num-val.muted { color: var(--text-2); }
-    .prog-num-label { font-size: 11px; color: var(--text-3); }
-
-    /* Summary stats */
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: .6rem;
-    }
-
-    @media (min-width: 480px) { .summary-grid { grid-template-columns: repeat(4, 1fr); } }
-
-    .sum-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--r-md);
-      padding: .85rem 1rem;
-    }
-    .sum-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); margin-bottom: 4px; }
-    .sum-val   { font-size: 18px; font-weight: 700; font-family: var(--mono); }
-    .sum-val.ok  { color: var(--ok); }
-    .sum-val.bad { color: var(--bad); }
-
-    /* Section heading */
-    .section-heading {
-      font-size: 13px; font-weight: 700; color: var(--text-2);
-      padding: .5rem 0 .4rem;
-      display: flex; align-items: center; gap: 6px;
-    }
-    .section-count {
-      background: var(--surface-2);
-      border: 1px solid var(--border);
-      border-radius: 99px;
-      font-size: 11px; font-weight: 700;
-      padding: 1px 8px; color: var(--text-3);
-    }
-    .section-count.bad { background: var(--bad-bg); color: var(--bad); border-color: transparent; }
-
-    /* Variance / uncounted lists */
-    .result-list {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--r-md);
-      overflow: hidden;
-    }
-
-    .result-item {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: .25rem .75rem;
-      padding: .7rem .9rem;
-      border-bottom: 1px solid var(--border);
-      align-items: center;
-    }
-    .result-item:last-child { border-bottom: none; }
-
-    .ri-desc  { font-size: 13px; font-weight: 500; line-height: 1.35; }
-    .ri-id    { font-family: var(--mono); font-size: 11px; color: var(--text-3); }
-    .ri-qtys  { font-size: 12px; color: var(--text-2); grid-column: 1; }
-    .ri-var   { font-family: var(--mono); font-size: 14px; font-weight: 700; text-align: right; }
-    .ri-var.pos { color: var(--ok); }
-    .ri-var.neg { color: var(--bad); }
-    .ri-sap   { font-family: var(--mono); font-size: 13px; color: var(--text-2); text-align: right; grid-row: 1 / span 2; align-self: center; }
-
-    .empty-section {
-      text-align: center; padding: 1.5rem;
-      color: var(--text-3); font-size: 13px;
-    }
-
-    /* ══════════════════════════════════════════════════════
-       CLEAR MODAL
-    ══════════════════════════════════════════════════════ */
-    .modal-overlay {
-      position: fixed; inset: 0; z-index: 9000;
-      background: rgba(0,0,0,0.5);
-      display: flex; align-items: center; justify-content: center;
-      padding: 1.5rem;
-      backdrop-filter: blur(2px);
-      -webkit-backdrop-filter: blur(2px);
-    }
-
-    .modal-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--r-lg);
-      padding: 1.75rem;
-      width: 100%; max-width: 360px;
-      box-shadow: 0 16px 48px rgba(0,0,0,0.2);
-    }
-
-    .modal-icon {
-      width: 44px; height: 44px;
-      background: var(--bad-bg);
-      border-radius: var(--r-md);
-      display: flex; align-items: center; justify-content: center;
-      margin-bottom: 1rem;
-    }
-
-    .modal-title { font-size: 17px; font-weight: 700; margin-bottom: .5rem; }
-    .modal-body  { font-size: 13px; color: var(--text-2); line-height: 1.6; margin-bottom: 1.5rem; }
-
-    .modal-warning {
-      background: var(--bad-bg);
-      border: 1px solid rgba(163,45,45,.2);
-      border-radius: var(--r-sm);
-      padding: .65rem .85rem;
-      font-size: 12px; font-weight: 600;
-      color: var(--bad);
-      margin-bottom: 1.25rem;
-      line-height: 1.5;
-    }
-
-    .modal-actions { display: flex; gap: .65rem; }
-
-    .modal-btn-cancel {
-      flex: 1; height: 44px;
-      background: var(--surface-2);
-      border: 1px solid var(--border-med);
-      border-radius: var(--r-sm);
-      font-size: 14px; font-weight: 600;
-      color: var(--text-2); font-family: inherit;
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-      transition: background .15s;
-    }
-    .modal-btn-cancel:hover { background: var(--border); }
-
-    .modal-btn-confirm {
-      flex: 1; height: 44px;
-      background: var(--bad);
-      border: none;
-      border-radius: var(--r-sm);
-      font-size: 14px; font-weight: 700;
-      color: #fff; font-family: inherit;
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-      transition: background .15s;
-    }
-    .modal-btn-confirm:hover   { background: #8a2525; }
-    .modal-btn-confirm:disabled { background: var(--text-3); cursor: not-allowed; }
-
-    .modal-btn-amber {
-      background: var(--amber) !important;
-    }
-    .modal-btn-amber:hover:not(:disabled) { background: var(--amber-dk) !important; }
-
-    /* Confirm-entry modal internals */
-    .cm-mat-row {
-      display: flex; align-items: baseline; gap: 8px;
-      margin-bottom: .35rem;
-    }
-    .cm-mat-id   { font-family: var(--mono); font-size: 12px; color: var(--text-3); }
-    .cm-mat-desc { font-size: 15px; font-weight: 700; line-height: 1.35; flex: 1; }
-
-    .cm-grid {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: .5rem .75rem;
-      background: var(--surface-2);
-      border: 1px solid var(--border);
-      border-radius: var(--r-md);
-      padding: .85rem 1rem;
-      margin: 1rem 0;
-    }
-    .cm-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); align-self: center; }
-    .cm-val   { font-family: var(--mono); font-size: 16px; font-weight: 700; text-align: right; }
-    .cm-val.highlight { color: var(--amber); font-size: 20px; }
-    .cm-val.ok  { color: var(--ok); }
-    .cm-val.bad { color: var(--bad); }
-    .cm-val.muted { color: var(--text-2); font-weight: 400; font-style: italic; }
-
-    /* Running total display (card + table) */
-    .rt-val {
-      font-family: var(--mono); font-size: 15px; font-weight: 700;
-      text-align: right;
-    }
-    .rt-val.rt-ok   { color: var(--ok); }
-    .rt-val.rt-bad  { color: var(--bad); }
-    .rt-val.rt-none { color: var(--text-3); font-weight: 400; }
-
-    /* Divider row inside cm-grid */
-    .cm-divider {
-      grid-column: 1 / -1;
-      height: 1px;
-      background: var(--border-med);
-      margin: .1rem 0;
-    }
-
-    .danger-link { color: var(--bad) !important; }
-
-    /* ══════════════════════════════════════════════════════
-       TOAST
-    ══════════════════════════════════════════════════════ */
-    #toast {
-      position: fixed; bottom: 1.25rem; left: 50%; transform: translateX(-50%);
-      background: var(--text); color: var(--bg);
-      padding: 10px 18px; border-radius: 99px;
-      font-size: 13px; font-weight: 500;
-      opacity: 0; pointer-events: none;
-      transition: opacity .2s; z-index: 9999;
-      white-space: nowrap; max-width: calc(100vw - 2rem);
-    }
-    #toast.show { opacity: 1; }
+/* ══════════════════════════════════════════════════════
+   RESET + TOKENS
+══════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Brand */
+  --gold:        #C8922A;
+  --gold-dk:     #A8751C;
+  --gold-lt:     #FDF4E3;
+  --gold-glow:   rgba(200,146,42,.18);
+
+  /* Surfaces */
+  --bg:          #F2F0EC;
+  --surface:     #FFFFFF;
+  --surface-2:   #EEEDE9;
+  --surface-3:   #E6E4DF;
+
+  /* Borders */
+  --line:        rgba(0,0,0,.09);
+  --line-med:    rgba(0,0,0,.15);
+  --line-heavy:  rgba(0,0,0,.24);
+
+  /* Text */
+  --ink:         #18181A;
+  --ink-2:       #5C5C62;
+  --ink-3:       #9A9AA0;
+  --ink-inv:     #FFFFFF;
+
+  /* Semantic */
+  --ok:          #1E7A3E;
+  --ok-bg:       #E6F4EC;
+  --ok-line:     rgba(30,122,62,.2);
+  --bad:         #B02828;
+  --bad-bg:      #FBEAEA;
+  --bad-line:    rgba(176,40,40,.2);
+  --info:        #1456A8;
+  --info-bg:     #E4EEF9;
+  --warn:        #A06010;
+  --warn-bg:     #FEF3E2;
+
+  /* Sizes */
+  --r:           8px;
+  --r-lg:        14px;
+  --top-h:       56px;
+  --tab-h:       48px;
+  --mono:        'IBM Plex Mono', 'Courier New', monospace;
+  --sans:        'IBM Plex Sans', -apple-system, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:          #141414;
+    --surface:     #1E1E1E;
+    --surface-2:   #272727;
+    --surface-3:   #313131;
+    --line:        rgba(255,255,255,.07);
+    --line-med:    rgba(255,255,255,.13);
+    --line-heavy:  rgba(255,255,255,.22);
+    --ink:         #EBEBEB;
+    --ink-2:       #9A9A9E;
+    --ink-3:       #5E5E62;
+    --gold-lt:     #2A2010;
+    --ok-bg:       #0E2B18;
+    --bad-bg:      #2B0E0E;
+    --info-bg:     #0A1E38;
+    --warn-bg:     #2A1A06;
+  }
+}
+
+html, body { height: 100%; }
+body {
+  font-family: var(--sans);
+  font-size: 15px;
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ══════════════════════════════════════════════════════
+   SETUP SCREEN
+══════════════════════════════════════════════════════ */
+#setup-screen {
+  display: flex;
+  min-height: 100dvh;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: var(--bg);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle grid texture */
+#setup-screen::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+
+#setup-screen::after {
+  content: '';
+  position: absolute;
+  top: -120px; left: 50%; transform: translateX(-50%);
+  width: 600px; height: 400px;
+  background: radial-gradient(ellipse at center, var(--gold-glow) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.setup-card {
+  background: var(--surface);
+  border: 1px solid var(--line-med);
+  border-radius: var(--r-lg);
+  padding: 2rem 2rem 1.75rem;
+  width: 100%; max-width: 440px;
+  box-shadow: 0 4px 32px rgba(0,0,0,.1), 0 1px 0 rgba(255,255,255,.6) inset;
+  position: relative;
+  z-index: 1;
+  animation: slideUp .35s cubic-bezier(.16,.8,.4,1) both;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.setup-eyebrow {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 1.25rem;
+}
+
+.setup-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--gold-lt);
+  border: 1px solid rgba(200,146,42,.3);
+  border-radius: 99px;
+  padding: 4px 10px;
+  font-size: 11px; font-weight: 600;
+  color: var(--gold-dk);
+  letter-spacing: .04em;
+  font-family: var(--mono);
+}
+
+.setup-badge-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--gold);
+}
+
+.setup-title {
+  font-size: 22px; font-weight: 700;
+  letter-spacing: -.3px;
+  margin-bottom: .35rem;
+  line-height: 1.2;
+}
+
+.setup-sub {
+  font-size: 13px; color: var(--ink-2);
+  margin-bottom: 1.75rem;
+  line-height: 1.65;
+}
+
+/* Field */
+.field { margin-bottom: 1.1rem; }
+.field-label {
+  display: block;
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .08em;
+  color: var(--ink-3); margin-bottom: 6px;
+}
+
+input[type="text"],
+input[type="number"] {
+  width: 100%; height: 44px;
+  padding: 0 12px;
+  background: var(--surface);
+  border: 1px solid var(--line-med);
+  border-radius: var(--r);
+  font-size: 15px; color: var(--ink);
+  font-family: var(--sans);
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+  -webkit-appearance: none; appearance: none;
+}
+input[type="text"]:focus,
+input[type="number"]:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-glow);
+}
+input[type="number"] {
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 16px;
+}
+input::placeholder { color: var(--ink-3); }
+
+.divider { height: 1px; background: var(--line); margin: 1.5rem 0; }
+
+/* Drop zone */
+.drop-zone {
+  border: 1.5px dashed var(--line-heavy);
+  border-radius: var(--r);
+  padding: 1.75rem 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  position: relative;
+}
+.drop-zone:hover, .drop-zone.dragover {
+  border-color: var(--gold);
+  background: var(--gold-lt);
+}
+.drop-zone input[type="file"] {
+  position: absolute; inset: 0;
+  opacity: 0; cursor: pointer;
+  width: 100%; height: 100%;
+}
+.drop-icon {
+  width: 40px; height: 40px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-med);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto .75rem;
+  color: var(--ink-3);
+  transition: background .15s, border-color .15s, color .15s;
+}
+.drop-zone:hover .drop-icon,
+.drop-zone.dragover .drop-icon {
+  background: var(--gold-lt);
+  border-color: rgba(200,146,42,.4);
+  color: var(--gold);
+}
+.drop-primary   { font-size: 13px; font-weight: 600; color: var(--ink-2); margin-bottom: 3px; }
+.drop-secondary { font-size: 11px; color: var(--ink-3); }
+
+/* Status panel */
+.mat-status {
+  border-radius: var(--r);
+  padding: .75rem 1rem;
+  font-size: 13px;
+  display: flex; align-items: flex-start; gap: 10px;
+  margin-top: .85rem;
+}
+.mat-status.loading { background: var(--surface-2); border: 1px solid var(--line); }
+.mat-status.ready   { background: var(--ok-bg);   border: 1px solid var(--ok-line); }
+.mat-status.error   { background: var(--bad-bg);  border: 1px solid var(--bad-line); }
+.mat-status.parsed  { background: var(--info-bg); border: 1px solid rgba(20,86,168,.15); }
+.mat-status-icon  { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
+.mat-status-body  { flex: 1; }
+.mat-status-title { font-weight: 700; margin-bottom: 2px; }
+.mat-status-title.ready  { color: var(--ok); }
+.mat-status-title.error  { color: var(--bad); }
+.mat-status-title.parsed { color: var(--info); }
+.mat-status-sub   { font-size: 12px; color: var(--ink-2); line-height: 1.5; }
+
+/* Spinner */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  width: 16px; height: 16px;
+  border: 2px solid var(--line-med);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  flex-shrink: 0;
+}
+
+/* Buttons */
+.btn-primary {
+  width: 100%; height: 48px;
+  background: var(--gold); color: #fff;
+  border: none; border-radius: var(--r);
+  font-size: 15px; font-weight: 700;
+  cursor: pointer; margin-top: 1.25rem;
+  font-family: var(--sans);
+  transition: background .15s, transform .1s;
+  -webkit-tap-highlight-color: transparent;
+  letter-spacing: .01em;
+}
+.btn-primary:hover:not(:disabled) { background: var(--gold-dk); }
+.btn-primary:active:not(:disabled) { transform: scale(.99); }
+.btn-primary:disabled {
+  background: var(--surface-2);
+  color: var(--ink-3);
+  cursor: not-allowed;
+}
+
+/* ══════════════════════════════════════════════════════
+   APP SHELL
+══════════════════════════════════════════════════════ */
+#app { display: none; }
+
+/* Top bar */
+.top-bar {
+  position: sticky; top: 0; z-index: 200;
+  height: var(--top-h);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  padding: 0 1rem;
+  display: flex; align-items: center; gap: .75rem;
+}
+
+.top-wordmark {
+  display: flex; align-items: center; gap: 8px;
+  flex: 1; min-width: 0;
+}
+.top-logo {
+  width: 30px; height: 30px;
+  background: var(--ink);
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.top-logo svg { color: var(--gold); }
+
+.top-title-block { min-width: 0; }
+.top-title {
+  font-size: 14px; font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  letter-spacing: -.1px;
+  line-height: 1.2;
+}
+.top-sub {
+  font-size: 11px; color: var(--ink-3);
+  font-family: var(--mono);
+  line-height: 1.2;
+}
+
+.top-bar-right {
+  display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+}
+
+.conn-pill {
+  display: flex; align-items: center; gap: 5px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  padding: 3px 9px;
+  cursor: default;
+}
+.conn-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--ink-3);
+  transition: background .3s;
+  flex-shrink: 0;
+}
+.conn-dot.live   { background: var(--ok); }
+.conn-dot.error  { background: var(--bad); }
+.conn-dot.saving { background: var(--gold); animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+.conn-text { font-size: 11px; color: var(--ink-2); font-family: var(--mono); }
+
+.icon-btn {
+  width: 34px; height: 34px;
+  background: none; border: 1px solid var(--line-med);
+  border-radius: var(--r);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--ink-2);
+  transition: background .12s, color .12s;
+  -webkit-tap-highlight-color: transparent;
+  font-family: var(--sans);
+}
+.icon-btn:hover { background: var(--surface-2); color: var(--ink); }
+.icon-btn.danger { color: var(--bad); }
+.icon-btn.danger:hover { background: var(--bad-bg); border-color: var(--bad-line); }
+
+/* Tab bar */
+.tab-bar {
+  position: sticky; top: var(--top-h); z-index: 190;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  display: flex; gap: 0;
+  padding: 0 1rem;
+}
+.tab-btn {
+  height: var(--tab-h);
+  background: none; border: none;
+  font-size: 13px; font-weight: 600;
+  color: var(--ink-3); font-family: var(--sans);
+  cursor: pointer; position: relative;
+  transition: color .15s;
+  -webkit-tap-highlight-color: transparent;
+  padding: 0 14px;
+  letter-spacing: .01em;
+}
+.tab-btn.active { color: var(--ink); }
+.tab-btn.active::after {
+  content: '';
+  position: absolute; bottom: 0; left: 8px; right: 8px; height: 2.5px;
+  background: var(--gold); border-radius: 3px 3px 0 0;
+}
+.tab-badge {
+  display: inline-block;
+  background: var(--bad-bg); color: var(--bad);
+  border-radius: 99px; font-size: 10px; font-weight: 700;
+  padding: 1px 6px; margin-left: 5px;
+  vertical-align: middle; line-height: 16px;
+  font-family: var(--mono);
+  transition: opacity .2s;
+}
+.tab-badge.hidden { opacity: 0; }
+
+/* ══════════════════════════════════════════════════════
+   COUNT TAB — TOOLBAR
+══════════════════════════════════════════════════════ */
+#count-tab  { display: block; }
+#totals-tab { display: none; }
+
+.count-toolbar {
+  position: sticky;
+  top: calc(var(--top-h) + var(--tab-h));
+  z-index: 150;
+  background: var(--bg);
+  padding: .65rem 1rem;
+  border-bottom: 1px solid var(--line);
+  display: flex; flex-direction: column; gap: .5rem;
+}
+
+.search-wrap {
+  position: relative;
+}
+.search-icon {
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+  color: var(--ink-3); pointer-events: none;
+  width: 16px; height: 16px;
+}
+#search-input {
+  padding-left: 34px;
+  font-size: 14px;
+  background: var(--surface);
+  height: 40px;
+}
+
+.filter-row { display: flex; gap: 5px; align-items: center; overflow-x: auto; padding-bottom: 1px; -webkit-overflow-scrolling: touch; }
+.filter-row::-webkit-scrollbar { display: none; }
+
+.fbtn {
+  flex-shrink: 0; height: 30px; padding: 0 12px;
+  background: var(--surface);
+  border: 1px solid var(--line-med);
+  border-radius: 99px;
+  font-size: 12px; font-weight: 600;
+  color: var(--ink-2); font-family: var(--sans);
+  cursor: pointer; white-space: nowrap;
+  transition: all .12s;
+  -webkit-tap-highlight-color: transparent;
+}
+.fbtn:hover  { background: var(--surface-2); }
+.fbtn.active { background: var(--ink); border-color: var(--ink); color: var(--ink-inv); }
+
+.fbtn-count {
+  font-family: var(--mono);
+  font-size: 10px; font-weight: 700;
+  background: var(--surface-2);
+  border-radius: 99px;
+  padding: 1px 5px;
+  margin-left: 3px;
+  vertical-align: middle;
+}
+.fbtn.active .fbtn-count {
+  background: rgba(255,255,255,.2);
+}
+
+.toolbar-right { margin-left: auto; display: flex; gap: 5px; align-items: center; flex-shrink: 0; }
+
+.act-btn {
+  flex-shrink: 0; height: 30px; padding: 0 12px;
+  border-radius: 99px;
+  font-size: 12px; font-weight: 600;
+  font-family: var(--sans); cursor: pointer; white-space: nowrap;
+  transition: all .12s;
+  -webkit-tap-highlight-color: transparent;
+}
+.act-btn-ghost {
+  background: var(--surface);
+  border: 1px solid var(--line-med);
+  color: var(--ink-2);
+}
+.act-btn-ghost:hover { background: var(--surface-2); }
+
+/* ══════════════════════════════════════════════════════
+   MODE TOGGLE (Set vs Add)
+══════════════════════════════════════════════════════ */
+.mode-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  padding: .5rem 1rem;
+  display: flex; align-items: center; gap: 10px;
+}
+.mode-label {
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .07em;
+  color: var(--ink-3);
+}
+.mode-toggle {
+  display: flex;
+  background: var(--surface-2);
+  border: 1px solid var(--line-med);
+  border-radius: 99px;
+  padding: 2px;
+  gap: 0;
+}
+.mode-opt {
+  height: 26px; padding: 0 12px;
+  background: none; border: none;
+  border-radius: 99px;
+  font-size: 12px; font-weight: 600; font-family: var(--sans);
+  color: var(--ink-3); cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+.mode-opt.active {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 4px rgba(0,0,0,.12);
+}
+.mode-hint {
+  font-size: 11px; color: var(--ink-3); margin-left: auto;
+}
+
+/* ══════════════════════════════════════════════════════
+   GROUPS + ROWS (MOBILE)
+══════════════════════════════════════════════════════ */
+.groups-container {
+  padding: .75rem;
+  display: flex; flex-direction: column; gap: .5rem;
+}
+
+.group-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+
+.group-header {
+  width: 100%;
+  display: flex; align-items: center; gap: 10px;
+  padding: .75rem 1rem;
+  background: none;
+  border: none; cursor: pointer; font-family: var(--sans);
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+  transition: background .12s;
+}
+.group-header:hover { background: var(--surface-2); }
+
+.gh-icon-wrap {
+  width: 34px; height: 34px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: 16px;
+}
+
+.gh-body { flex: 1; min-width: 0; }
+.gh-name {
+  font-size: 13px; font-weight: 700; color: var(--ink);
+  display: block; line-height: 1.2; margin-bottom: 4px;
+}
+
+.gh-sub { display: flex; align-items: center; gap: 8px; }
+
+.gh-progress-wrap {
+  flex: 1; height: 4px;
+  background: var(--surface-3);
+  border-radius: 2px; overflow: hidden;
+}
+.gh-progress-fill {
+  height: 100%; border-radius: 2px;
+  background: var(--gold);
+  transition: width .5s cubic-bezier(.4,0,.2,1);
+}
+.gh-progress-fill.done { background: var(--ok); }
+
+.gh-badge {
+  font-size: 11px; font-weight: 700; font-family: var(--mono);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 5px; padding: 1px 7px;
+  color: var(--ink-2); flex-shrink: 0;
+  transition: background .2s, color .2s;
+}
+.gh-badge.done {
+  background: var(--ok-bg); color: var(--ok);
+  border-color: var(--ok-line);
+}
+
+.gh-chevron {
+  color: var(--ink-3); flex-shrink: 0;
+  transition: transform .2s;
+  display: flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px;
+}
+.gh-chevron.collapsed { transform: rotate(-90deg); }
+
+/* Row separator inside group */
+.group-items { border-top: 1px solid var(--line); }
+.group-items.collapsed { display: none; }
+
+/* Material row */
+.mat-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 1rem;
+  border-bottom: 1px solid var(--line);
+  transition: background .12s;
+  position: relative;
+}
+.mat-row:last-child { border-bottom: none; }
+.mat-row.row-match    { background: color-mix(in srgb, var(--ok-bg)  30%, transparent); }
+.mat-row.row-variance { background: color-mix(in srgb, var(--bad-bg) 30%, transparent); }
+
+/* Status stripe on left edge */
+.mat-row::before {
+  content: '';
+  position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: transparent;
+  transition: background .2s;
+}
+.mat-row.row-match::before    { background: var(--ok); }
+.mat-row.row-variance::before { background: var(--bad); }
+
+.row-info { flex: 1; min-width: 0; }
+.row-desc {
+  font-size: 13px; font-weight: 600; color: var(--ink);
+  line-height: 1.35;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.row-meta { font-size: 11px; color: var(--ink-3); margin-top: 2px; font-family: var(--mono); }
+
+/* Running total chip */
+.row-total-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--surface-2); border: 1px solid var(--line-med);
+  border-radius: 5px; padding: 1px 6px;
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
+  color: var(--ink-2); margin-top: 3px;
+  white-space: nowrap;
+}
+.row-total-chip .chip-label { font-weight: 400; color: var(--ink-3); font-size: 10px; }
+.row-total-chip.chip-ok  { background: var(--ok-bg);  color: var(--ok);  border-color: var(--ok-line); }
+.row-total-chip.chip-bad { background: var(--bad-bg); color: var(--bad); border-color: var(--bad-line); }
+
+.row-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+
+.row-qty {
+  width: 88px; height: 38px;
+  padding: 0 10px; text-align: right;
+  font-family: var(--mono); font-size: 15px; font-weight: 600;
+  background: var(--surface-2);
+  border: 1.5px solid var(--line-med);
+  border-radius: var(--r);
+  color: var(--ink);
+  -webkit-appearance: none; appearance: none;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s, background .15s;
+}
+.row-qty:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-glow);
+  background: var(--surface);
+}
+.row-qty.mode-set:focus { border-color: var(--info); box-shadow: 0 0 0 3px rgba(20,86,168,.12); }
+
+.row-var {
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  text-align: right; white-space: nowrap;
+  line-height: 1;
+}
+.vb-none { color: var(--ink-3); font-weight: 400; }
+.vb-zero { color: var(--ok); }
+.vb-pos  { color: var(--ok); }
+.vb-neg  { color: var(--bad); }
+
+/* Footer / count display */
+.list-footer {
+  padding: .6rem 1rem;
+  font-size: 11px; color: var(--ink-3);
+  font-family: var(--mono);
+  display: flex; justify-content: space-between;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  position: sticky;
+  bottom: 0; z-index: 100;
+}
+
+.no-rows {
+  text-align: center; padding: 3rem 1rem;
+  color: var(--ink-2); font-size: 13px;
+}
+
+/* ══════════════════════════════════════════════════════
+   DESKTOP TABLE (≥ 800px)
+══════════════════════════════════════════════════════ */
+.desktop-table-wrap { display: none; }
+
+@media (min-width: 800px) {
+  .groups-container    { display: none; }
+  .list-footer         { display: none; }
+
+  .desktop-table-wrap {
+    display: block;
+    margin: .75rem 1rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+  }
+
+  .tbl-scroll { overflow-x: auto; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 760px; }
+  thead tr { background: var(--surface-2); }
+  th {
+    padding: 9px 10px; text-align: left;
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .08em;
+    color: var(--ink-3); border-bottom: 1px solid var(--line-med);
+    white-space: nowrap; font-family: var(--sans);
+    user-select: none;
+  }
+  th.r, td.r { text-align: right; }
+  td { padding: 6px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr.tr-match    td { background: color-mix(in srgb, var(--ok-bg)  35%, transparent); }
+  tr.tr-variance td { background: color-mix(in srgb, var(--bad-bg) 35%, transparent); }
+  tr:hover td { filter: brightness(.97); }
+  @media (prefers-color-scheme: dark) { tr:hover td { filter: brightness(1.08); } }
+
+  .t-mat  { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+  .t-desc { font-size: 12px; line-height: 1.35; max-width: 220px; word-break: break-word; }
+  .t-sap  { font-family: var(--mono); font-size: 12px; }
+  .t-phys { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--ink); }
+  .t-qty  { width: 88px; height: 32px; padding: 0 8px; font-family: var(--mono); font-size: 13px; border-radius: var(--r); }
+  .t-qty.mode-set:focus { border-color: var(--info); box-shadow: 0 0 0 3px rgba(20,86,168,.12); }
+  .t-notes {
+    width: 120px; height: 30px; padding: 0 8px;
+    font-size: 12px; border-radius: var(--r);
+    font-family: var(--sans);
+  }
+  .t-var  { font-family: var(--mono); font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .tv-none { color: var(--ink-3); font-weight: 400; }
+  .tv-zero, .tv-pos { color: var(--ok); }
+  .tv-neg  { color: var(--bad); }
+  .t-by   { font-size: 11px; color: var(--ink-2); white-space: nowrap; font-family: var(--mono); }
+  .t-time { font-size: 10px; color: var(--ink-3); white-space: nowrap; font-family: var(--mono); }
+
+  .tbl-footer {
+    padding: 8px 12px; font-size: 11px; color: var(--ink-3);
+    border-top: 1px solid var(--line); background: var(--surface-2);
+    display: flex; justify-content: space-between;
+    font-family: var(--mono);
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   TOTALS TAB
+══════════════════════════════════════════════════════ */
+.totals-content {
+  padding: .75rem;
+  display: flex; flex-direction: column; gap: .75rem;
+  max-width: 900px;
+}
+
+/* Progress card */
+.progress-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 1.25rem;
+}
+.card-heading {
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .09em;
+  color: var(--ink-3); margin-bottom: .75rem;
+}
+
+.progress-bar-track {
+  height: 8px; background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 4px; overflow: hidden; margin-bottom: 1rem;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold), var(--gold-dk));
+  border-radius: 4px;
+  transition: width .6s cubic-bezier(.4,0,.2,1);
+}
+.progress-bar-fill.done-fill { background: linear-gradient(90deg, var(--ok), #167035); }
+
+.progress-nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+.prog-num { text-align: center; }
+.prog-num-val { font-size: 26px; font-weight: 700; display: block; font-family: var(--mono); }
+.prog-num-val.gold   { color: var(--gold); }
+.prog-num-val.green  { color: var(--ok); }
+.prog-num-val.muted  { color: var(--ink-2); }
+.prog-num-label { font-size: 11px; color: var(--ink-3); }
+
+/* Summary stats */
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: .5rem;
+}
+@media (min-width: 480px) { .summary-grid { grid-template-columns: repeat(4, 1fr); } }
+
+.sum-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: .85rem 1rem;
+}
+.sum-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-3); margin-bottom: 4px; }
+.sum-val   { font-size: 20px; font-weight: 700; font-family: var(--mono); color: var(--ink); }
+.sum-val.ok  { color: var(--ok); }
+.sum-val.bad { color: var(--bad); }
+
+/* Group breakdown card */
+.group-breakdown {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.gb-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: .6rem 1rem;
+  border-bottom: 1px solid var(--line);
+}
+.gb-row:last-child { border-bottom: none; }
+.gb-icon { font-size: 15px; flex-shrink: 0; width: 22px; text-align: center; }
+.gb-name { font-size: 13px; font-weight: 600; color: var(--ink); flex: 1; }
+.gb-bar-wrap { flex: 1; max-width: 80px; height: 4px; background: var(--surface-2); border-radius: 2px; overflow: hidden; }
+.gb-bar { height: 100%; background: var(--gold); border-radius: 2px; }
+.gb-bar.done { background: var(--ok); }
+.gb-frac { font-family: var(--mono); font-size: 11px; color: var(--ink-2); flex-shrink: 0; min-width: 40px; text-align: right; }
+.gb-var { font-family: var(--mono); font-size: 11px; font-weight: 700; flex-shrink: 0; min-width: 48px; text-align: right; }
+.gb-var.pos { color: var(--ok); }
+.gb-var.neg { color: var(--bad); }
+.gb-var.none { color: var(--ink-3); font-weight: 400; }
+
+/* Section heading */
+.section-heading {
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .07em;
+  color: var(--ink-3);
+  padding: .6rem 0 .4rem;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-pill {
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 99px; font-size: 10px; font-weight: 700;
+  padding: 1px 7px; color: var(--ink-2);
+  font-family: var(--mono);
+}
+.section-pill.bad { background: var(--bad-bg); color: var(--bad); border-color: var(--bad-line); }
+
+.result-list {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+
+.result-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: .2rem .75rem;
+  padding: .65rem .9rem;
+  border-bottom: 1px solid var(--line);
+  align-items: center;
+}
+.result-item:last-child { border-bottom: none; }
+
+.ri-desc { font-size: 13px; font-weight: 500; line-height: 1.3; }
+.ri-id   { font-family: var(--mono); font-size: 11px; color: var(--ink-3); grid-column: 1; }
+.ri-qtys { font-size: 11px; color: var(--ink-2); grid-column: 1; font-family: var(--mono); }
+.ri-var  { font-family: var(--mono); font-size: 14px; font-weight: 700; text-align: right; grid-row: 1; align-self: center; }
+.ri-var.pos { color: var(--ok); }
+.ri-var.neg { color: var(--bad); }
+.ri-sap  { font-family: var(--mono); font-size: 13px; color: var(--ink-2); text-align: right; grid-row: 1 / span 2; align-self: center; }
+
+.empty-section {
+  text-align: center; padding: 1.5rem;
+  color: var(--ink-3); font-size: 12px;
+}
+
+/* ══════════════════════════════════════════════════════
+   MODALS
+══════════════════════════════════════════════════════ */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 9000;
+  background: rgba(0,0,0,.5);
+  display: flex; align-items: flex-end; justify-content: center;
+  padding: 0 0 env(safe-area-inset-bottom);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: fadeIn .15s ease both;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+@media (min-width: 480px) {
+  .modal-overlay { align-items: center; padding: 1.5rem; }
+  .modal-card { border-radius: var(--r-lg) !important; }
+}
+
+.modal-card {
+  background: var(--surface);
+  border: 1px solid var(--line-med);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  padding: 1.5rem;
+  width: 100%; max-width: 400px;
+  box-shadow: 0 -8px 48px rgba(0,0,0,.2);
+  animation: slideSheet .2s cubic-bezier(.16,.8,.4,1) both;
+}
+@keyframes slideSheet {
+  from { transform: translateY(24px); opacity: .5; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+@media (min-width: 480px) {
+  .modal-card { animation-name: slideUp; }
+}
+
+/* Sheet drag handle */
+.modal-handle {
+  width: 36px; height: 4px;
+  background: var(--line-heavy);
+  border-radius: 2px;
+  margin: -4px auto 1rem;
+  display: block;
+}
+@media (min-width: 480px) { .modal-handle { display: none; } }
+
+/* Confirm entry modal */
+.cm-header {
+  display: flex; flex-direction: column; gap: 2px;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--line);
+}
+.cm-mat-id   { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+.cm-mat-desc { font-size: 16px; font-weight: 700; line-height: 1.3; }
+
+.cm-mode-tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--info-bg);
+  border: 1px solid rgba(20,86,168,.15);
+  border-radius: 99px;
+  padding: 2px 8px;
+  font-size: 11px; font-weight: 600; color: var(--info);
+  margin-top: 4px; align-self: flex-start;
+}
+.cm-mode-tag.add-mode { background: var(--gold-lt); border-color: rgba(200,146,42,.25); color: var(--gold-dk); }
+
+.cm-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: .4rem .75rem;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: .85rem 1rem;
+  margin-bottom: 1rem;
+}
+.cm-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--ink-3); align-self: center;
+}
+.cm-val {
+  font-family: var(--mono); font-size: 16px; font-weight: 700;
+  text-align: right; color: var(--ink);
+}
+.cm-val.highlight { color: var(--gold); font-size: 20px; }
+.cm-val.ok  { color: var(--ok); }
+.cm-val.bad { color: var(--bad); }
+.cm-val.muted { color: var(--ink-2); font-weight: 400; font-style: italic; font-size: 14px; }
+.cm-divider { grid-column: 1 / -1; height: 1px; background: var(--line-med); margin: .15rem 0; }
+
+/* Danger modal */
+.modal-icon-wrap {
+  width: 44px; height: 44px;
+  background: var(--bad-bg);
+  border: 1px solid var(--bad-line);
+  border-radius: var(--r);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 1rem; color: var(--bad);
+}
+.modal-title { font-size: 17px; font-weight: 700; margin-bottom: .4rem; }
+.modal-body  { font-size: 13px; color: var(--ink-2); line-height: 1.65; margin-bottom: 1rem; }
+.modal-warning {
+  background: var(--warn-bg);
+  border: 1px solid rgba(160,96,16,.18);
+  border-radius: var(--r);
+  padding: .65rem .85rem;
+  font-size: 12px; font-weight: 600;
+  color: var(--warn); margin-bottom: 1.25rem;
+  line-height: 1.5;
+}
+
+.modal-actions { display: flex; gap: .65rem; }
+.modal-btn {
+  flex: 1; height: 44px;
+  border-radius: var(--r);
+  font-size: 14px; font-weight: 700;
+  font-family: var(--sans); cursor: pointer;
+  transition: all .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.modal-btn-cancel {
+  background: var(--surface-2);
+  border: 1px solid var(--line-med);
+  color: var(--ink-2);
+}
+.modal-btn-cancel:hover { background: var(--surface-3); }
+.modal-btn-danger {
+  background: var(--bad); border: none; color: #fff;
+}
+.modal-btn-danger:hover:not(:disabled) { background: #921f1f; }
+.modal-btn-gold {
+  background: var(--gold); border: none; color: #fff;
+}
+.modal-btn-gold:hover:not(:disabled) { background: var(--gold-dk); }
+.modal-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ══════════════════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════════════════ */
+#toast {
+  position: fixed; bottom: 1.25rem; left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  background: var(--ink); color: var(--bg);
+  padding: 9px 16px; border-radius: 99px;
+  font-size: 12px; font-weight: 600; font-family: var(--sans);
+  opacity: 0; pointer-events: none;
+  transition: opacity .2s, transform .2s;
+  z-index: 9999; white-space: nowrap;
+  max-width: calc(100vw - 2rem);
+  box-shadow: 0 4px 16px rgba(0,0,0,.25);
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ══════════════════════════════════════════════════════
+   NOTES DRAWER (mobile)
+══════════════════════════════════════════════════════ */
+.notes-drawer {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 1rem 10px;
+  background: var(--surface);
+}
+.notes-drawer-input {
+  flex: 1; height: 32px;
+  padding: 0 10px;
+  font-size: 12px; color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-med);
+  border-radius: var(--r); outline: none;
+  font-family: var(--sans);
+  transition: border-color .15s;
+}
+.notes-drawer-input:focus { border-color: var(--gold); }
+.notes-drawer-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .07em; color: var(--ink-3); flex-shrink: 0;
+}
   </style>
 </head>
 <body>
@@ -712,50 +1090,52 @@
 ══════════════════════════════════════════════════════ -->
 <div id="setup-screen">
   <div class="setup-card">
-    <div class="setup-icon">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-           stroke="#B87C20" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
-        <rect x="9" y="3" width="6" height="4" rx="1"/>
-        <line x1="9" y1="12" x2="15" y2="12"/>
-        <line x1="9" y1="16" x2="13" y2="16"/>
-      </svg>
+    <div class="setup-eyebrow">
+      <div class="setup-badge">
+        <span class="setup-badge-dot"></span>
+        17AG · Cerritos
+      </div>
     </div>
-    <div class="setup-title">Cerritos Physical Count</div>
-    <div class="setup-sub">17AG · Cerritos Warehouse, CA<br>All entries sync live with your team.</div>
 
-    <label class="field-label" for="setup-name">Your name or initials</label>
-    <input id="setup-name" type="text" placeholder="e.g. Albert G." autocomplete="off"
-           autocorrect="off" autocapitalize="words" />
+    <div class="setup-title">Physical Inventory Count</div>
+    <div class="setup-sub">
+      Annex warehouse — no barcodes. Enter counts manually and sync live with your team.
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="setup-name">Your name / initials</label>
+      <input id="setup-name" type="text" placeholder="e.g. Albert M."
+             autocomplete="off" autocorrect="off" autocapitalize="words" />
+    </div>
 
     <div class="divider"></div>
 
-    <label class="field-label">Inventory file</label>
+    <label class="field-label">SAP inventory file</label>
     <div id="drop-zone" class="drop-zone"
          ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
       <input type="file" id="file-input" accept=".xlsx,.xls" onchange="onFileInput(event)" />
       <div class="drop-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-             stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
           <polyline points="17 8 12 3 7 8"/>
           <line x1="12" y1="3" x2="12" y2="15"/>
         </svg>
       </div>
       <div class="drop-primary">Drop SAP export here</div>
-      <div class="drop-secondary">or tap to browse — .xlsx or .xls</div>
+      <div class="drop-secondary">or tap to browse · .xlsx or .xls</div>
     </div>
 
     <div id="mat-status" class="mat-status loading" style="display:none;">
       <span class="spinner mat-status-icon"></span>
       <div class="mat-status-body">
         <div class="mat-status-title" id="mat-status-title">Checking…</div>
-        <div class="mat-status-sub"  id="mat-status-sub"></div>
+        <div class="mat-status-sub"   id="mat-status-sub"></div>
       </div>
     </div>
 
     <button class="btn-primary" id="start-btn" disabled onclick="startCounting()">
-      Start Counting
+      Start Counting →
     </button>
   </div>
 </div>
@@ -767,39 +1147,104 @@
 
   <!-- Top bar -->
   <div class="top-bar">
-    <div class="top-bar-title">17AG Cerritos Count</div>
-    <div class="top-bar-meta">
-      <span class="dot" id="conn-dot"></span>
-      <span class="conn-text" id="conn-label">…</span>
-      <button class="top-link" onclick="goBack()">← Exit</button>
-      <button class="top-link danger-link" onclick="showClearModal()">Clear Day</button>
+    <div class="top-wordmark">
+      <div class="top-logo">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
+          <rect x="9" y="3" width="6" height="4" rx="1"/>
+          <line x1="9" y1="12" x2="15" y2="12"/>
+          <line x1="9" y1="16" x2="13" y2="16"/>
+        </svg>
+      </div>
+      <div class="top-title-block">
+        <div class="top-title">Cerritos Count</div>
+        <div class="top-sub">17AG Annex</div>
+      </div>
+    </div>
+    <div class="top-bar-right">
+      <div class="conn-pill">
+        <span class="conn-dot" id="conn-dot"></span>
+        <span class="conn-text" id="conn-label">…</span>
+      </div>
+      <button class="icon-btn" title="Export CSV" onclick="exportCSV()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+      </button>
+      <button class="icon-btn" title="Exit session" onclick="goBack()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+      </button>
+      <button class="icon-btn danger" title="Clear all data" onclick="showClearModal()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+          <path d="M10 11v6M14 11v6"/>
+        </svg>
+      </button>
     </div>
   </div>
 
   <!-- Tab bar -->
   <div class="tab-bar">
-    <button class="tab-btn active" id="tab-count"  onclick="switchTab('count')">Count</button>
-    <button class="tab-btn"        id="tab-totals" onclick="switchTab('totals')">Totals</button>
+    <button class="tab-btn active" id="tab-count"  onclick="switchTab('count')">
+      Count
+    </button>
+    <button class="tab-btn" id="tab-totals" onclick="switchTab('totals')">
+      Totals
+      <span class="tab-badge hidden" id="variance-badge">0</span>
+    </button>
   </div>
 
-  <!-- ── Count tab ───────────────────────────────────── -->
+  <!-- ── Count Tab ─────────────────────────────────────── -->
   <div id="count-tab">
-
-    <!-- Sticky toolbar -->
+    <!-- Toolbar -->
     <div class="count-toolbar">
-      <input id="search-input" type="text" placeholder="Search material # or description…"
-             oninput="applyFilters()" autocorrect="off" autocomplete="off" />
+      <div class="search-wrap">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input id="search-input" type="text" placeholder="Search material # or description…"
+               oninput="applyFilters()" autocorrect="off" autocomplete="off" />
+      </div>
       <div class="filter-row">
-        <button class="fbtn active" data-f="all"       onclick="setFilter(this)">All</button>
-        <button class="fbtn"        data-f="uncounted"  onclick="setFilter(this)">Uncounted</button>
-        <button class="fbtn"        data-f="counted"    onclick="setFilter(this)">Counted</button>
-        <button class="fbtn"        data-f="variance"   onclick="setFilter(this)">Variance</button>
-        <button class="export-btn"                      onclick="exportCSV()">⬇ CSV</button>
+        <button class="fbtn active" data-f="all"       onclick="setFilter(this)">
+          All <span class="fbtn-count" id="fc-all">0</span>
+        </button>
+        <button class="fbtn" data-f="uncounted"  onclick="setFilter(this)">
+          Uncounted <span class="fbtn-count" id="fc-uncounted">0</span>
+        </button>
+        <button class="fbtn" data-f="counted"    onclick="setFilter(this)">
+          Counted <span class="fbtn-count" id="fc-counted">0</span>
+        </button>
+        <button class="fbtn" data-f="variance"   onclick="setFilter(this)">
+          Variance <span class="fbtn-count" id="fc-variance">0</span>
+        </button>
+        <div class="toolbar-right">
+          <button class="act-btn act-btn-ghost" onclick="exportCSV()">↓ CSV</button>
+        </div>
       </div>
     </div>
 
-    <!-- Mobile card list -->
-    <div class="mat-list" id="card-list"></div>
+    <!-- Mode bar -->
+    <div class="mode-bar">
+      <span class="mode-label">Entry mode</span>
+      <div class="mode-toggle">
+        <button class="mode-opt active" id="mode-add" onclick="setMode('add')">+ Add</button>
+        <button class="mode-opt" id="mode-set" onclick="setMode('set')">= Set</button>
+      </div>
+      <span class="mode-hint" id="mode-hint-text">Adds to running total</span>
+    </div>
+
+    <!-- Mobile group list -->
+    <div class="groups-container" id="groups-container"></div>
 
     <!-- Desktop table -->
     <div class="desktop-table-wrap">
@@ -807,14 +1252,15 @@
         <table>
           <thead>
             <tr>
-              <th style="width:90px">Material</th>
+              <th style="width:85px">Material</th>
               <th>Description</th>
-              <th class="r" style="width:80px">SAP Qty</th>
-              <th class="r" style="width:96px">Physical Qty</th>
+              <th class="r" style="width:75px">SAP</th>
+              <th class="r" style="width:75px">Counted</th>
+              <th class="r" style="width:96px">Enter Qty</th>
               <th class="r" style="width:80px">Variance</th>
-              <th style="width:95px">Counted By</th>
-              <th style="width:120px">Notes</th>
-              <th style="width:60px">Time</th>
+              <th style="width:90px">By</th>
+              <th style="width:130px">Notes</th>
+              <th style="width:55px">Time</th>
             </tr>
           </thead>
           <tbody id="tbl-body"></tbody>
@@ -822,33 +1268,32 @@
       </div>
       <div class="tbl-footer">
         <span id="row-count-desktop">—</span>
-        <span id="last-sync"></span>
+        <span id="last-sync-desktop">—</span>
       </div>
     </div>
 
-    <!-- Shared footer for mobile -->
-    <div class="list-footer" id="list-footer-mobile">
+    <!-- Mobile footer -->
+    <div class="list-footer" id="list-footer">
       <span id="row-count-mobile">—</span>
-      <span id="last-sync-mobile"></span>
+      <span id="last-sync-mobile">—</span>
     </div>
-
   </div><!-- /count-tab -->
 
-  <!-- ── Totals tab ──────────────────────────────────── -->
+  <!-- ── Totals Tab ─────────────────────────────────────── -->
   <div id="totals-tab">
-    <div class="totals-content" id="totals-content">
-      <!-- rendered by renderTotals() -->
-    </div>
+    <div class="totals-content" id="totals-content"></div>
   </div>
 
 </div><!-- /app -->
 
-<!-- Confirm entry modal -->
+<!-- ── Confirm Entry Modal ──────────────────────────── -->
 <div id="confirm-modal" class="modal-overlay" style="display:none;" onclick="onConfirmOverlayClick(event)">
   <div class="modal-card">
-    <div class="cm-mat-row">
+    <span class="modal-handle"></span>
+    <div class="cm-header">
       <span class="cm-mat-id" id="cm-mat-id"></span>
       <span class="cm-mat-desc" id="cm-mat-desc"></span>
+      <span class="cm-mode-tag" id="cm-mode-tag">Add mode</span>
     </div>
 
     <div class="cm-grid">
@@ -860,7 +1305,7 @@
       <span class="cm-label">Current total</span>
       <span class="cm-val muted" id="cm-prev"></span>
 
-      <span class="cm-label">This entry</span>
+      <span class="cm-label" id="cm-entry-label">This entry</span>
       <span class="cm-val highlight" id="cm-count"></span>
 
       <div class="cm-divider"></div>
@@ -873,18 +1318,19 @@
     </div>
 
     <div class="modal-actions">
-      <button class="modal-btn-cancel"                          onclick="cancelEntry()">Cancel</button>
-      <button class="modal-btn-confirm modal-btn-amber" id="confirm-entry-btn" onclick="confirmEntry()">Confirm</button>
+      <button class="modal-btn modal-btn-cancel" onclick="cancelEntry()">Cancel</button>
+      <button class="modal-btn modal-btn-gold"   id="confirm-entry-btn" onclick="confirmEntry()">Confirm</button>
     </div>
   </div>
 </div>
 
-<!-- Clear day modal -->
+<!-- ── Clear Day Modal ────────────────────────────────── -->
 <div id="clear-modal" class="modal-overlay" style="display:none;" onclick="onModalOverlayClick(event)">
   <div class="modal-card">
-    <div class="modal-icon">
+    <span class="modal-handle"></span>
+    <div class="modal-icon-wrap">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-           stroke="#A32D2D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="3 6 5 6 21 6"/>
         <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
         <path d="M10 11v6M14 11v6"/>
@@ -893,15 +1339,15 @@
     </div>
     <div class="modal-title">Clear all data?</div>
     <div class="modal-body">
-      This removes all materials and count entries from Supabase for every user on the team.
-      Use this at the end of the day before starting a new count session.
+      This removes all materials and count entries from Supabase for the entire team.
+      Use this at end of day before starting a fresh count session.
     </div>
     <div class="modal-warning">
-      ⚠ This cannot be undone. Export a CSV first if you need a record of today's count.
+      ⚠ This cannot be undone. Export a CSV first if you need a record.
     </div>
     <div class="modal-actions">
-      <button class="modal-btn-cancel"  onclick="hideClearModal()">Cancel</button>
-      <button class="modal-btn-confirm" id="confirm-clear-btn" onclick="clearAllData()">Clear everything</button>
+      <button class="modal-btn modal-btn-cancel" onclick="hideClearModal()">Cancel</button>
+      <button class="modal-btn modal-btn-danger" id="confirm-clear-btn" onclick="clearAllData()">Clear everything</button>
     </div>
   </div>
 </div>
@@ -912,901 +1358,428 @@
      SCRIPTS
 ══════════════════════════════════════════════════════ -->
 <script>
-  /* ── Config ─────────────────────────────────────────── */
-  const SUPABASE_URL      = 'https://iyqeihxcuenaooqdgluf.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml5cWVpaHhjdWVuYW9vcWRnbHVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMTY1MTcsImV4cCI6MjA5MzU5MjUxN30.dc3-3ONuuWMp8ZjsByc_Tcb5Vg2xk5abHK9yw-l8mxw';
-  const MAT_TABLE         = 'cerritos_materials';
-  const CNT_TABLE         = 'cerritos_counts';
+/* ── Config ─────────────────────────────────────────── */
+const SUPABASE_URL      = 'https://iyqeihxcuenaooqdgluf.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml5cWVpaHhjdWVuYW9vcWRnbHVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMTY1MTcsImV4cCI6MjA5MzU5MjUxN30.dc3-3ONuuWMp8ZjsByc_Tcb5Vg2xk5abHK9yw-l8mxw';
+const MAT_TABLE         = 'cerritos_materials';
+const CNT_TABLE         = 'cerritos_counts';
 
-  /* ── State ───────────────────────────────────────────── */
-  let db           = null;
-  let MATERIALS    = [];
-  let counts       = {};
-  let parsedRows   = null;
-  let currentUser  = '';
-  let activeFilter = 'all';
-  let saveTimers   = {};
-  let dirtyInputs  = new Set(); // material IDs typed but not yet confirmed
-  let activeTab    = 'count';
+/* ── State ───────────────────────────────────────────── */
+let db           = null;
+let MATERIALS    = [];
+let counts       = {};
+let parsedRows   = null;
+let currentUser  = '';
+let activeFilter = 'all';
+let entryMode    = 'add';   // 'add' | 'set'
+let saveTimers   = {};
+let dirtyInputs  = new Set();
+let activeTab    = 'count';
+let pendingEntry = null;
+let groupExpanded = {};
 
-  /* ── Supabase ─────────────────────────────────────────── */
-  function initSupabase() {
-    db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const GROUP_ORDER = ['Cups','Lids','Labels','Cases','Seals','Sleeves','Tubs','Oils','Other'];
+const GROUP_ICONS = { Cups:'🥤', Lids:'🔵', Labels:'🏷️', Cases:'📦', Seals:'🔒', Sleeves:'🫧', Tubs:'🪣', Oils:'🫗', Other:'📋' };
+
+/* ── Supabase ─────────────────────────────────────────── */
+function initSupabase() {
+  db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+
+/* ══════════════════════════════════════════════════════
+   SETUP
+══════════════════════════════════════════════════════ */
+const nameInput = document.getElementById('setup-name');
+const startBtn  = document.getElementById('start-btn');
+const dropZone  = document.getElementById('drop-zone');
+
+nameInput.addEventListener('input', evaluateStartBtn);
+nameInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !startBtn.disabled) startCounting();
+});
+
+function onDragOver(e) { e.preventDefault(); dropZone.classList.add('dragover'); }
+function onDragLeave()  { dropZone.classList.remove('dragover'); }
+function onDrop(e) {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  const f = e.dataTransfer.files[0]; if (f) handleFile(f);
+}
+function onFileInput(e) { const f = e.target.files[0]; if (f) handleFile(f); }
+
+function handleFile(file) {
+  if (!file.name.match(/\.(xlsx|xls)$/i)) {
+    showMatStatus('error', 'Unsupported file', 'Upload a .xlsx or .xls file.'); return;
   }
-
-  /* ══════════════════════════════════════════════════════
-     SETUP
-  ══════════════════════════════════════════════════════ */
-  const nameInput = document.getElementById('setup-name');
-  const startBtn  = document.getElementById('start-btn');
-  const dropZone  = document.getElementById('drop-zone');
-
-  nameInput.addEventListener('input', evaluateStartBtn);
-  nameInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !startBtn.disabled) startCounting(); });
-
-  function onDragOver(e) { e.preventDefault(); dropZone.classList.add('dragover'); }
-  function onDragLeave()  { dropZone.classList.remove('dragover'); }
-  function onDrop(e) {
-    e.preventDefault(); dropZone.classList.remove('dragover');
-    const f = e.dataTransfer.files[0]; if (f) handleFile(f);
-  }
-  function onFileInput(e) { const f = e.target.files[0]; if (f) handleFile(f); }
-
-  function handleFile(file) {
-    if (!file.name.match(/\.(xlsx|xls)$/i)) {
-      showMatStatus('error', 'Unsupported file', 'Upload a .xlsx or .xls file.'); return;
-    }
-    showMatStatus('loading', 'Reading file…', file.name);
-    const reader = new FileReader();
-    reader.onload = e => {
-      try {
-        const wb   = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
-        const ws   = wb.Sheets[wb.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-
-        let hIdx = -1;
-        for (let i = 0; i < Math.min(10, rows.length); i++) {
-          if (rows[i].some(c => String(c).trim() === 'Material')) { hIdx = i; break; }
-        }
-        if (hIdx === -1) { showMatStatus('error', 'Unrecognized format', 'Cannot find "Material" header row.'); return; }
-
-        const hdrs    = rows[hIdx].map(c => String(c).trim());
-        const matIdx  = hdrs.findIndex(h => h === 'Material');
-        const descIdx = hdrs.findIndex(h => h === 'Material Description');
-        const qtyIdx  = hdrs.findIndex(h => h === 'Unrestricted Stock');
-        const missing = [];
-        if (matIdx  < 0) missing.push('"Material"');
-        if (descIdx < 0) missing.push('"Material Description"');
-        if (qtyIdx  < 0) missing.push('"Unrestricted Stock"');
-        if (missing.length) { showMatStatus('error', 'Missing columns', missing.join(', ')); return; }
-
-        const parsed = [];
-        for (let i = hIdx + 1; i < rows.length; i++) {
-          const r = rows[i];
-          const id = parseInt(r[matIdx], 10);
-          const desc = String(r[descIdx] || '').trim();
-          const qty  = parseFloat(r[qtyIdx]) || 0;
-          if (!id || !desc) continue;
-          parsed.push({ material_id: id, description: desc, sap_qty: qty });
-        }
-        if (!parsed.length) { showMatStatus('error', 'No rows found', 'File parsed but contained no material rows.'); return; }
-
-        parsedRows = parsed;
-        showMatStatus('parsed', `${parsed.length} materials ready`, `From: ${file.name}`);
-        evaluateStartBtn();
-      } catch (err) {
-        showMatStatus('error', 'Parse error', err.message || 'Could not read the file.');
-      }
-    };
-    reader.readAsArrayBuffer(file);
-  }
-
-  function showMatStatus(type, title, sub) {
-    const el = document.getElementById('mat-status');
-    el.style.display = 'flex';
-    el.className = `mat-status ${type}`;
-    document.getElementById('mat-status-title').className = `mat-status-title ${type}`;
-    document.getElementById('mat-status-title').textContent = title;
-    document.getElementById('mat-status-sub').textContent = sub || '';
-    const iconEl = el.querySelector('.mat-status-icon');
-    if (type === 'loading') {
-      iconEl.outerHTML = `<span class="spinner mat-status-icon"></span>`;
-    } else {
-      const fill = { ready: '#2A7A3B', parsed: '#185FA5', error: '#A32D2D' }[type] || '#A32D2D';
-      const paths = {
-        ready:  'M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z',
-        parsed: 'M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v4a1 1 0 102 0V7zm-1 8a1 1 0 100-2 1 1 0 000 2z',
-        error:  'M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z'
-      };
-      const cur = el.querySelector('.mat-status-icon');
-      if (cur) cur.outerHTML = `<svg class="mat-status-icon" viewBox="0 0 20 20" fill="${fill}"><path fill-rule="evenodd" d="${paths[type]||paths.error}" clip-rule="evenodd"/></svg>`;
-    }
-  }
-
-  function evaluateStartBtn() {
-    startBtn.disabled = !(nameInput.value.trim() && (MATERIALS.length || parsedRows));
-  }
-
-  async function checkExistingMaterials() {
-    showMatStatus('loading', 'Checking for existing data…', '');
+  showMatStatus('loading', 'Reading file…', file.name);
+  const reader = new FileReader();
+  reader.onload = ev => {
     try {
-      const { data, error } = await db.from(MAT_TABLE).select('material_id,description,sap_qty,uploaded_by,uploaded_at').order('material_id');
-      if (error) throw error;
-      if (data && data.length) {
-        MATERIALS = data;
-        const f = data[0];
-        const d = f.uploaded_at ? new Date(f.uploaded_at).toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' }) : '';
-        showMatStatus('ready', `${data.length} materials loaded`, `${f.uploaded_by ? 'By ' + f.uploaded_by + ' · ' : ''}${d}. Drop a new file above to replace.`);
-      } else {
-        showMatStatus('error', 'No materials found', 'Upload the SAP Excel export to start.');
+      const wb   = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
+      const ws   = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+      let hIdx = -1;
+      for (let i = 0; i < Math.min(10, rows.length); i++) {
+        if (rows[i].some(c => String(c).trim() === 'Material')) { hIdx = i; break; }
       }
-    } catch (err) {
-      showMatStatus('error', 'Supabase error', 'Check SUPABASE_ANON_KEY and network.');
-    }
-    evaluateStartBtn();
-  }
+      if (hIdx === -1) { showMatStatus('error', 'Unrecognized format', 'Cannot find "Material" header row.'); return; }
 
-  async function startCounting() {
-    const name = nameInput.value.trim();
-    if (!name || (!MATERIALS.length && !parsedRows)) return;
-    currentUser = name;
-    try { localStorage.setItem('cerritos_user', name); } catch(e) {}
-    document.getElementById('setup-screen').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-    setConnStatus('connecting');
-    if (parsedRows) { await uploadMaterials(parsedRows); MATERIALS = parsedRows; parsedRows = null; }
-    await loadCounts();
-    renderAll();
-    subscribeRealtime();
-  }
+      const hdrs    = rows[hIdx].map(c => String(c).trim());
+      const matIdx  = hdrs.findIndex(h => h === 'Material');
+      const descIdx = hdrs.findIndex(h => h === 'Material Description');
+      const qtyIdx  = hdrs.findIndex(h => h === 'Unrestricted Stock');
+      const missing = [];
+      if (matIdx  < 0) missing.push('"Material"');
+      if (descIdx < 0) missing.push('"Material Description"');
+      if (qtyIdx  < 0) missing.push('"Unrestricted Stock"');
+      if (missing.length) { showMatStatus('error', 'Missing columns', missing.join(', ')); return; }
 
-  async function uploadMaterials(rows) {
-    showToast(`Uploading ${rows.length} materials…`);
-    try {
-      await db.from(MAT_TABLE).delete().gt('material_id', 0);
-      const stamped = rows.map(r => ({ ...r, uploaded_by: currentUser, uploaded_at: new Date().toISOString() }));
-      for (let i = 0; i < stamped.length; i += 500) {
-        const { error } = await db.from(MAT_TABLE).insert(stamped.slice(i, i + 500));
-        if (error) throw error;
+      const parsed = [];
+      for (let i = hIdx + 1; i < rows.length; i++) {
+        const r    = rows[i];
+        const id   = parseInt(r[matIdx], 10);
+        const desc = String(r[descIdx] || '').trim();
+        const qty  = parseFloat(r[qtyIdx]) || 0;
+        if (!id || !desc) continue;
+        parsed.push({ material_id: id, description: desc, sap_qty: qty });
       }
-      showToast(`${rows.length} materials uploaded`);
+      if (!parsed.length) { showMatStatus('error', 'No rows found', 'File parsed but contained no material rows.'); return; }
+
+      parsedRows = parsed;
+      showMatStatus('parsed', `${parsed.length} materials ready`, `From: ${file.name}`);
+      evaluateStartBtn();
     } catch (err) {
-      showToast('Upload failed — check console');
+      showMatStatus('error', 'Parse error', err.message || 'Could not read the file.');
     }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function showMatStatus(type, title, sub) {
+  const el = document.getElementById('mat-status');
+  el.style.display = 'flex';
+  el.className = `mat-status ${type}`;
+  document.getElementById('mat-status-title').className = `mat-status-title ${type}`;
+  document.getElementById('mat-status-title').textContent = title;
+  document.getElementById('mat-status-sub').textContent = sub || '';
+  const iconEl = el.querySelector('.mat-status-icon');
+  if (type === 'loading') {
+    iconEl.outerHTML = `<span class="spinner mat-status-icon"></span>`;
+    return;
   }
-
-  function goBack() {
-    document.getElementById('setup-screen').style.display = 'flex';
-    document.getElementById('app').style.display = 'none';
-    nameInput.value = ''; startBtn.disabled = true;
-  }
-
-  /* ══════════════════════════════════════════════════════
-     TAB SWITCHING
-  ══════════════════════════════════════════════════════ */
-  function switchTab(name) {
-    activeTab = name;
-    document.getElementById('count-tab').style.display  = name === 'count'  ? 'block' : 'none';
-    document.getElementById('totals-tab').style.display = name === 'totals' ? 'block' : 'none';
-    document.getElementById('tab-count').classList.toggle('active',  name === 'count');
-    document.getElementById('tab-totals').classList.toggle('active', name === 'totals');
-    if (name === 'totals') renderTotals();
-  }
-
-  /* ══════════════════════════════════════════════════════
-     DATA
-  ══════════════════════════════════════════════════════ */
-  async function loadCounts() {
-    try {
-      const { data, error } = await db.from(CNT_TABLE).select('*');
-      if (error) throw error;
-      counts = {};
-      (data || []).forEach(r => { counts[r.material_id] = r; });
-      setConnStatus('live');
-      updateLastSync();
-    } catch (err) {
-      setConnStatus('error');
-      showToast('Could not load counts');
-    }
-  }
-
-  function subscribeRealtime() {
-    db.channel('cerritos_live')
-      .on('postgres_changes', { event: '*', schema: 'public', table: CNT_TABLE }, payload => {
-        const id = (payload.new || payload.old || {}).material_id;
-        if (!id) return;
-        if (payload.eventType === 'DELETE') delete counts[id];
-        else counts[id] = payload.new;
-        updateRowDOM(id);
-        if (activeTab === 'totals') renderTotals();
-        updateLastSync();
-      })
-      .subscribe(s => {
-        if (s === 'SUBSCRIBED')    setConnStatus('live');
-        if (s === 'CHANNEL_ERROR') setConnStatus('error');
-      });
-  }
-
-  function scheduleSave(materialId, snapshot) {
-    if (saveTimers[materialId]) clearTimeout(saveTimers[materialId]);
-    /* Pass snapshot directly so a realtime update landing in the
-       debounce window cannot overwrite what this user just confirmed */
-    saveTimers[materialId] = setTimeout(() => saveRow(materialId, snapshot), 700);
-  }
-
-  async function saveRow(materialId, snapshot) {
-    setConnStatus('saving');
-    try {
-      if (!snapshot) {
-        const { error } = await db.from(CNT_TABLE).delete().eq('material_id', materialId);
-        if (error) throw error;
-      } else {
-        const { error } = await db.from(CNT_TABLE).upsert({
-          material_id: materialId, physical_qty: snapshot.physical_qty,
-          counted_by: snapshot.counted_by, notes: snapshot.notes || '',
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'material_id' });
-        if (error) throw error;
-      }
-      setConnStatus('live');
-    } catch (err) {
-      setConnStatus('error'); showToast('Save failed');
-    }
-  }
-
-  /* ══════════════════════════════════════════════════════
-     INPUT HANDLERS
-  ══════════════════════════════════════════════════════ */
-  /* ══════════════════════════════════════════════════════
-     CONFIRM-ENTRY FLOW
-     Qty inputs fire onQtyBlur / onQtyKeydown.
-     The actual state + Supabase write only happens after
-     the user confirms in the modal.
-  ══════════════════════════════════════════════════════ */
-  let pendingEntry = null; // { materialId, newQty, prevQty }
-
-  function onQtyKeydown(e, materialId, inputEl) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      inputEl.blur();           // triggers onQtyBlur
-    }
-    if (e.key === 'Escape') {
-      revertInput(materialId);  // discard what was typed
-      inputEl.blur();
-    }
-  }
-
-  function onQtyBlur(materialId, inputEl) {
-    /* Only act if the user actually typed something */
-    if (!dirtyInputs.has(materialId)) return;
-    if (pendingEntry) return;
-    if (document.getElementById('confirm-modal').style.display !== 'none') return;
-
-    const val = inputEl.value.trim();
-    inputEl.style.borderColor = '';
-
-    /* User typed then deleted everything — abandon */
-    if (val === '') { dirtyInputs.delete(materialId); return; }
-
-    /* Validate — integers only, positives or negatives both allowed */
-    const n = parseInt(val, 10);
-    if (isNaN(n)) { inputEl.style.borderColor = 'var(--bad)'; return; }
-
-    /* Adding zero changes nothing — skip silently */
-    if (n === 0) { dirtyInputs.delete(materialId); inputEl.value = ''; return; }
-
-    const prevQty = counts[materialId] != null ? counts[materialId].physical_qty : null;
-    pendingEntry = { materialId, delta: n, prevQty };
-    showConfirmModal(materialId, n, prevQty);
-  }
-
-  function showConfirmModal(materialId, delta, prevQty) {
-    const mat = MATERIALS.find(m => m.material_id === materialId);
-    if (!mat) return;
-
-    const sap      = Number(mat.sap_qty);
-    const prev     = prevQty !== null && prevQty !== undefined ? prevQty : 0;
-    const newTotal = prev + delta;
-    const diff     = newTotal - sap;
-
-    document.getElementById('cm-mat-id').textContent   = materialId;
-    document.getElementById('cm-mat-desc').textContent = mat.description;
-    document.getElementById('cm-sap').textContent      = sap.toLocaleString();
-
-    /* Current total */
-    const prevEl = document.getElementById('cm-prev');
-    prevEl.textContent = prevQty !== null && prevQty !== undefined
-      ? prevQty.toLocaleString() : 'None';
-
-    /* This entry — show sign explicitly */
-    const countEl = document.getElementById('cm-count');
-    countEl.textContent = (delta > 0 ? '+' : '') + delta.toLocaleString();
-    countEl.className   = 'cm-val highlight ' + (delta < 0 ? 'bad' : '');
-
-    /* New total */
-    const totalEl = document.getElementById('cm-total');
-    totalEl.textContent = newTotal.toLocaleString();
-    totalEl.className   = 'cm-val ' + (diff === 0 ? 'ok' : 'bad');
-
-    /* Variance vs SAP */
-    const varEl = document.getElementById('cm-var');
-    varEl.textContent = (diff >= 0 ? '+' : '') + diff.toLocaleString();
-    varEl.className   = 'cm-val ' + (diff === 0 ? 'ok' : 'bad');
-
-    const btn = document.getElementById('confirm-entry-btn');
-    btn.disabled    = false;
-    btn.textContent = 'Confirm';
-
-    document.getElementById('confirm-modal').style.display = 'flex';
-  }
-
-  function confirmEntry() {
-    if (!pendingEntry) return;
-    const { materialId, delta, prevQty } = pendingEntry;
-    const btn = document.getElementById('confirm-entry-btn');
-    btn.disabled = true;
-
-    const prev     = prevQty !== null && prevQty !== undefined ? prevQty : 0;
-    const newTotal = prev + delta;
-
-    counts[materialId] = {
-      material_id:  materialId,
-      physical_qty: newTotal,
-      counted_by:   currentUser,
-      notes:        (counts[materialId] || {}).notes || '',
-      updated_at:   new Date().toISOString()
-    };
-
-    const snapshot = { ...counts[materialId] };
-    dirtyInputs.delete(materialId);
-
-    const cardInp  = document.querySelector(`#card-${materialId} .qty-input-card`);
-    const tableInp = document.getElementById('tqty-' + materialId);
-    if (cardInp)  cardInp.value  = '';
-    if (tableInp) tableInp.value = '';
-
-    updateRowDOM(materialId);
-    if (activeTab === 'totals') renderTotals();
-    scheduleSave(materialId, snapshot);
-
-    pendingEntry = null;
-    document.getElementById('confirm-modal').style.display = 'none';
-  }
-
-  function cancelEntry() {
-    if (pendingEntry) {
-      dirtyInputs.delete(pendingEntry.materialId);
-      revertInput(pendingEntry.materialId);
-      pendingEntry = null;
-    }
-    document.getElementById('confirm-modal').style.display = 'none';
-  }
-
-  function revertInput(materialId) {
-    dirtyInputs.delete(materialId);
-    const cardInp  = document.querySelector(`#card-${materialId} .qty-input-card`);
-    const tableInp = document.getElementById('tqty-' + materialId);
-    if (cardInp)  { cardInp.value  = ''; cardInp.style.borderColor  = ''; }
-    if (tableInp) { tableInp.value = ''; tableInp.style.borderColor = ''; }
-  }
-
-  function onConfirmOverlayClick(e) {
-    if (e.target === document.getElementById('confirm-modal')) cancelEntry();
-  }
-
-  /* onQtyChange kept for notes compatibility */
-  function onQtyChange() {}
-
-  function onNotesChange(materialId, inputEl) {
-    if (counts[materialId]) {
-      counts[materialId].notes = inputEl.value.trim();
-      scheduleSave(materialId);
-    }
-  }
-
-  /* ══════════════════════════════════════════════════════
-     DOM HELPERS
-  ══════════════════════════════════════════════════════ */
-  function fmtTime(iso) {
-    if (!iso) return '';
-    return new Date(iso).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
-  }
-
-  function varInfo(phys, sap) {
-    if (phys === null || phys === undefined) return { cls: 'vb-none', tcls: 'tv-none', text: '—' };
-    const d = phys - sap;
-    const t = (d >= 0 ? '+' : '') + d.toLocaleString();
-    return {
-      cls:  d === 0 ? 'vb-zero' : d > 0 ? 'vb-pos' : 'vb-neg',
-      tcls: d === 0 ? 'tv-zero' : d > 0 ? 'tv-pos' : 'tv-neg',
-      text: t
-    };
-  }
-
-  function escH(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  /* Update a single material's DOM in both card + table */
-  function updateRowDOM(materialId) {
-    const mat = MATERIALS.find(m => m.material_id === materialId);
-    if (!mat) return;
-    const c = counts[materialId];
-    const phys = c ? c.physical_qty : null;
-    const { cls, tcls, text } = varInfo(phys, mat.sap_qty);
-    const by   = c ? (c.counted_by || '') : '';
-    const ts   = c ? fmtTime(c.updated_at) : '';
-
-    /* ---- Compact row (mobile) ---- */
-    const card = document.getElementById('card-' + materialId);
-    if (card) {
-      const dotCls = phys === null ? '' : (phys === mat.sap_qty ? 'dot-ok' : 'dot-bad');
-      const rowCls = phys === null ? '' : (phys === mat.sap_qty ? 'row-match' : 'row-variance');
-      card.className = `mat-row ${rowCls}`;
-      const dot = card.querySelector('.row-dot');
-      if (dot) dot.className = `row-dot ${dotCls}`;
-      const rv = document.getElementById('rv-' + materialId);
-      if (rv) { rv.textContent = text; rv.className = `row-var ${cls}`; }
-      const qi = card.querySelector('.qty-input-card');
-      /* Input is always blank unless the user is actively typing — never pre-fill */
-      if (qi && !dirtyInputs.has(materialId)) qi.value = '';
-    }
-    updateGroupHeader(getGroup(mat.description));
-
-    /* ---- Table row ---- */
-    const row = document.getElementById('row-' + materialId);
-    if (row) {
-      row.className = phys !== null ? (phys === mat.sap_qty ? 'tr-match' : 'tr-variance') : '';
-      const tv = document.getElementById('tvar-' + materialId);
-      if (tv) { tv.textContent = text; tv.className = `t-var ${tcls}`; }
-      const tby = document.getElementById('tby-'  + materialId);
-      if (tby) tby.textContent = by;
-      const tts = document.getElementById('tts-'  + materialId);
-      if (tts) tts.textContent = ts;
-      const tqi = document.getElementById('tqty-' + materialId);
-      if (tqi && !dirtyInputs.has(materialId)) tqi.value = '';
-    }
-
-    updateStats();
-  }
-
-  /* ══════════════════════════════════════════════════════
-     RENDER ALL
-  ══════════════════════════════════════════════════════ */
-  function renderAll() {
-    renderCards();
-    renderTable();
-    updateStats();
-    applyFilters();
-  }
-
-  /* ── Group helpers ───────────────────────────────────── */
-  const GROUP_ORDER  = ['Cups','Lids','Labels','Cases','Seals','Sleeves','Tubs','Oils','Other'];
-  const GROUP_ICONS  = { Cups:'🥤', Lids:'🔵', Labels:'🏷️', Cases:'📦', Seals:'🔒', Sleeves:'🫧', Tubs:'🪣', Oils:'🫗', Other:'📋' };
-  let groupExpanded  = {};
-
-  function getGroup(desc) {
-    const d = String(desc).toLowerCase();
-    if (d.startsWith('cup'))  return 'Cups';
-    if (d.startsWith('lid'))  return 'Lids';
-    if (d.startsWith('lbl'))  return 'Labels';
-    if (d.startsWith('case')) return 'Cases';
-    if (d.startsWith('seal')) return 'Seals';
-    if (d.startsWith('slv'))  return 'Sleeves';
-    if (d.startsWith('tub'))  return 'Tubs';
-    if (d.startsWith('oil'))  return 'Oils';
-    return 'Other';
-  }
-
-  function toggleGroup(name) {
-    groupExpanded[name] = !groupExpanded[name];
-    const items   = document.getElementById('gi-'  + name);
-    const chevron = document.getElementById('ghc-' + name);
-    if (items)   items.classList.toggle('collapsed', !groupExpanded[name]);
-    if (chevron) chevron.classList.toggle('collapsed', !groupExpanded[name]);
-  }
-
-  function updateGroupHeader(name) {
-    const mats    = MATERIALS.filter(m => getGroup(m.description) === name);
-    const counted = mats.filter(m => counts[m.material_id] != null).length;
-    const total   = mats.length;
-    const pct     = total ? Math.round((counted / total) * 100) : 0;
-    const done    = counted === total && total > 0;
-
-    const badge = document.getElementById('ghb-' + name);
-    if (badge) { badge.textContent = `${counted} / ${total}`; badge.className = 'gh-badge' + (done ? ' done' : ''); }
-
-    const bar = document.getElementById('ghbar-' + name);
-    if (bar) bar.style.width = pct + '%';
-  }
-
-  /* Mobile compact rows */
-  function renderCards() {
-    const list = document.getElementById('card-list');
-
-    /* Build groups */
-    const groups = {};
-    GROUP_ORDER.forEach(g => { groups[g] = []; });
-    MATERIALS.forEach(mat => { const g = getGroup(mat.description); if (groups[g]) groups[g].push(mat); });
-
-    /* Default: expand all groups */
-    GROUP_ORDER.forEach(g => { if (groupExpanded[g] === undefined) groupExpanded[g] = true; });
-
-    let html = '';
-
-    GROUP_ORDER.forEach(name => {
-      const mats = groups[name];
-      if (!mats.length) return;
-
-      const counted = mats.filter(m => counts[m.material_id] != null).length;
-      const total   = mats.length;
-      const pct     = Math.round((counted / total) * 100);
-      const done    = counted === total;
-      const expanded = groupExpanded[name];
-
-      html += `
-<div class="group-section" id="grp-${name}">
-  <button class="group-header" onclick="toggleGroup('${name}')">
-    <span class="gh-icon">${GROUP_ICONS[name] || '📋'}</span>
-    <div class="gh-body">
-      <span class="gh-name">${name}</span>
-      <div class="gh-sub">
-        <span id="ghb-${name}" class="gh-badge${done ? ' done' : ''}">${counted} / ${total}</span>
-        <div class="gh-bar-wrap"><div class="gh-bar-fill" id="ghbar-${name}" style="width:${pct}%"></div></div>
-      </div>
-    </div>
-    <span class="gh-chevron${expanded ? '' : ' collapsed'}" id="ghc-${name}">›</span>
-  </button>
-
-  <div class="group-items${expanded ? '' : ' collapsed'}" id="gi-${name}">`;
-
-      mats.forEach(({ material_id: id, description: desc, sap_qty: sap }) => {
-        const c    = counts[id];
-        const phys = c ? c.physical_qty : null;
-        const { cls, text } = varInfo(phys, sap);
-        const dotCls  = phys === null ? '' : (phys === sap ? 'dot-ok' : 'dot-bad');
-        const rowCls  = phys === null ? '' : (phys === sap ? 'row-match' : 'row-variance');
-        const vCls    = cls.replace('vb-', 'vb-');   // reuse same classes
-
-        html += `
-    <div class="mat-row ${rowCls}" id="card-${id}">
-      <span class="row-dot ${dotCls}"></span>
-      <div class="row-info">
-        <div class="row-desc">${escH(desc)}</div>
-        <div class="row-meta">${id} &nbsp;·&nbsp; SAP ${Number(sap).toLocaleString()}</div>
-      </div>
-      <div class="row-right">
-        <input class="row-qty qty-input-card" type="number" inputmode="decimal" step="1"
-               placeholder="0"
-               value=""
-               oninput="dirtyInputs.add(${id})"
-               onkeydown="onQtyKeydown(event,${id},this)"
-               onblur="onQtyBlur(${id},this)" />
-        <span class="row-var ${cls}" id="rv-${id}">${text}</span>
-      </div>
-    </div>`;
-      });
-
-      html += `
-  </div>
-</div>`;
-    });
-
-    list.innerHTML = html || `<div class="no-rows">No materials loaded.</div>`;
-  }
-
-  /* Desktop table */
-  function renderTable() {
-    const tbody = document.getElementById('tbl-body');
-    let html = '';
-    MATERIALS.forEach(({ material_id: id, description: desc, sap_qty: sap }) => {
-      const c    = counts[id];
-      const phys = c ? c.physical_qty : null;
-      const { tcls, text } = varInfo(phys, sap);
-      const rowCls = phys !== null ? (phys === sap ? 'tr-match' : 'tr-variance') : '';
-      html += `<tr id="row-${id}" class="${rowCls}">
-        <td><span class="t-mat">${id}</span></td>
-        <td><span class="t-desc">${escH(desc)}</span></td>
-        <td class="r"><span class="t-sap">${Number(sap).toLocaleString()}</span></td>
-        <td class="r">
-          <input class="t-qty" id="tqty-${id}" type="number" inputmode="decimal" step="1" placeholder="0"
-                 value=""
-                 oninput="dirtyInputs.add(${id})"
-                 onkeydown="onQtyKeydown(event,${id},this)"
-                 onblur="onQtyBlur(${id},this)" />
-        </td>
-        <td class="r"><span class="t-var ${tcls}" id="tvar-${id}">${text}</span></td>
-        <td><span class="t-by" id="tby-${id}">${escH(c ? (c.counted_by || '') : '')}</span></td>
-        <td>
-          <input class="t-notes" type="text" placeholder="notes…"
-                 value="${escH(c ? (c.notes || '') : '')}"
-                 onchange="onNotesChange(${id},this)" />
-        </td>
-        <td><span class="t-time" id="tts-${id}">${c ? fmtTime(c.updated_at) : ''}</span></td>
-      </tr>`;
-    });
-    tbody.innerHTML = html || `<tr><td colspan="8" class="no-rows">No materials loaded.</td></tr>`;
-  }
-
-  /* ══════════════════════════════════════════════════════
-     TOTALS TAB
-  ══════════════════════════════════════════════════════ */
-  function renderTotals() {
-    const total   = MATERIALS.length;
-    const counted = Object.keys(counts).length;
-    const remain  = total - counted;
-    const pct     = total ? Math.round((counted / total) * 100) : 0;
-
-    /* Counted-only aggregates */
-    let totalSAP = 0, totalPhys = 0;
-    const withVar = [], uncounted = [];
-
-    MATERIALS.forEach(({ material_id: id, description: desc, sap_qty: sap }) => {
-      const c = counts[id];
-      if (c && c.physical_qty !== null && c.physical_qty !== undefined) {
-        totalSAP  += Number(sap);
-        totalPhys += c.physical_qty;
-        if (c.physical_qty !== sap) {
-          withVar.push({ id, desc, sap: Number(sap), phys: c.physical_qty, diff: c.physical_qty - Number(sap) });
-        }
-      } else {
-        uncounted.push({ id, desc, sap: Number(sap) });
-      }
-    });
-
-    /* Sort variances by absolute value desc */
-    withVar.sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
-
-    const netVar   = totalPhys - totalSAP;
-    const netCls   = netVar === 0 ? '' : netVar > 0 ? ' ok' : ' bad';
-    const netTxt   = (netVar >= 0 ? '+' : '') + netVar.toLocaleString();
-
-    let html = `
-<div class="progress-card">
-  <div class="progress-card-title">Progress</div>
-  <div class="progress-bar-wrap">
-    <div class="progress-bar-fill" style="width:${pct}%"></div>
-  </div>
-  <div class="progress-nums">
-    <div class="prog-num"><span class="prog-num-val green">${counted}</span><span class="prog-num-label">Counted</span></div>
-    <div class="prog-num"><span class="prog-num-val amber">${remain}</span><span class="prog-num-label">Remaining</span></div>
-    <div class="prog-num"><span class="prog-num-val muted">${pct}%</span><span class="prog-num-label">Complete</span></div>
-  </div>
-</div>
-
-<div class="summary-grid">
-  <div class="sum-card"><div class="sum-label">SAP Total</div><div class="sum-val">${totalSAP.toLocaleString()}</div></div>
-  <div class="sum-card"><div class="sum-label">Physical Total</div><div class="sum-val">${totalPhys.toLocaleString()}</div></div>
-  <div class="sum-card"><div class="sum-label">Net Variance</div><div class="sum-val${netCls}">${netTxt}</div></div>
-  <div class="sum-card"><div class="sum-label">Items w/ Variance</div><div class="sum-val${withVar.length ? ' bad' : ' ok'}">${withVar.length}</div></div>
-</div>`;
-
-    /* Variance list */
-    html += `<div>
-  <div class="section-heading">
-    Items with Variance
-    <span class="section-count${withVar.length ? ' bad' : ''}">${withVar.length}</span>
-  </div>`;
-    if (withVar.length) {
-      html += `<div class="result-list">`;
-      withVar.forEach(({ id, desc, sap, phys, diff }) => {
-        const cls  = diff > 0 ? 'pos' : 'neg';
-        const sign = diff > 0 ? '+' : '';
-        html += `<div class="result-item">
-  <div class="ri-desc">${escH(desc)}</div>
-  <div class="ri-var ${cls}">${sign}${diff.toLocaleString()}</div>
-  <div class="ri-qtys ri-id">${id} &nbsp;·&nbsp; SAP: ${sap.toLocaleString()} &nbsp;→&nbsp; Physical: ${phys.toLocaleString()}</div>
-</div>`;
-      });
-      html += `</div>`;
-    } else {
-      html += `<div class="result-list"><div class="empty-section">${counted ? 'No variances — all counts match SAP.' : 'No items counted yet.'}</div></div>`;
-    }
-    html += `</div>`;
-
-    /* Uncounted list */
-    html += `<div>
-  <div class="section-heading">
-    Uncounted Items
-    <span class="section-count">${uncounted.length}</span>
-  </div>`;
-    if (uncounted.length) {
-      html += `<div class="result-list">`;
-      uncounted.forEach(({ id, desc, sap }) => {
-        html += `<div class="result-item">
-  <div class="ri-desc">${escH(desc)}</div>
-  <div class="ri-sap">${sap.toLocaleString()}</div>
-  <div class="ri-id">${id}</div>
-</div>`;
-      });
-      html += `</div>`;
-    } else {
-      html += `<div class="result-list"><div class="empty-section">All items have been counted.</div></div>`;
-    }
-    html += `</div>`;
-
-    document.getElementById('totals-content').innerHTML = html;
-  }
-
-  /* ══════════════════════════════════════════════════════
-     STATS & FILTERS
-  ══════════════════════════════════════════════════════ */
-  function updateStats() {
-    const total   = MATERIALS.length;
-    const counted = Object.keys(counts).length;
-    let varCount  = 0;
-    MATERIALS.forEach(({ material_id: id, sap_qty: sap }) => {
-      const c = counts[id];
-      if (c && c.physical_qty !== sap) varCount++;
-    });
-    /* Stats are now only on the Totals tab — just update visible counts */
-    applyFilters();
-  }
-
-  function updateLastSync() {
-    const t = 'Synced ' + new Date().toLocaleTimeString();
-    const ds = document.getElementById('last-sync');
-    const ms = document.getElementById('last-sync-mobile');
-    if (ds) ds.textContent = t;
-    if (ms) ms.textContent = t;
-  }
-
-  function setFilter(btn) {
-    document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    activeFilter = btn.dataset.f;
-    applyFilters();
-  }
-
-  function applyFilters() {
-    const q = (document.getElementById('search-input') || {}).value || '';
-    const ql = q.trim().toLowerCase();
-    let visible = 0;
-
-    /* Track visibility per group for group-section show/hide */
-    const groupVisible = {};
-    GROUP_ORDER.forEach(g => { groupVisible[g] = 0; });
-
-    MATERIALS.forEach(({ material_id: id, description: desc, sap_qty: sap }) => {
-      const c    = counts[id];
-      const phys = c ? c.physical_qty : null;
-
-      let pass = true;
-      if (activeFilter === 'uncounted') pass = phys === null || phys === undefined;
-      else if (activeFilter === 'counted')  pass = phys !== null && phys !== undefined;
-      else if (activeFilter === 'variance') pass = phys !== null && phys !== undefined && phys !== sap;
-      if (pass && ql) pass = String(id).includes(ql) || desc.toLowerCase().includes(ql);
-
-      const show = pass ? '' : 'none';
-      const card = document.getElementById('card-' + id);
-      if (card) card.style.display = show;
-      const row  = document.getElementById('row-'  + id);
-      if (row)  row.style.display  = show;
-
-      if (pass) { visible++; groupVisible[getGroup(desc)]++; }
-    });
-
-    /* Show/hide entire group sections */
-    GROUP_ORDER.forEach(name => {
-      const grp = document.getElementById('grp-' + name);
-      if (grp) grp.style.display = groupVisible[name] > 0 ? '' : 'none';
-    });
-
-    const lbl = `Showing ${visible} of ${MATERIALS.length}`;
-    const rm = document.getElementById('row-count-mobile');
-    const rd = document.getElementById('row-count-desktop');
-    if (rm) rm.textContent = lbl;
-    if (rd) rd.textContent = lbl;
-  }
-
-  /* ══════════════════════════════════════════════════════
-     EXPORT
-  ══════════════════════════════════════════════════════ */
-  function exportCSV() {
-    const rows = [['Material','Description','SAP Qty','Physical Qty','Variance','Counted By','Notes','Timestamp'].join(',')];
-    MATERIALS.forEach(({ material_id: id, description: desc, sap_qty: sap }) => {
-      const c    = counts[id];
-      const phys = (c && c.physical_qty !== null) ? c.physical_qty : '';
-      const diff = phys !== '' ? phys - sap : '';
-      rows.push([id, `"${String(desc).replace(/"/g,'""')}"`, sap, phys, diff,
-                 `"${c ? (c.counted_by||'') : ''}"`,
-                 `"${c ? String(c.notes||'').replace(/"/g,'""') : ''}"`,
-                 `"${c && c.updated_at ? new Date(c.updated_at).toLocaleString() : ''}"`].join(','));
-    });
-    const url = URL.createObjectURL(new Blob([rows.join('\n')], { type:'text/csv;charset=utf-8;' }));
-    const a = Object.assign(document.createElement('a'), {
-      href: url, download: `cerritos_count_${new Date().toISOString().slice(0,10)}.csv`
-    });
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showToast('CSV exported');
-  }
-
-  /* ══════════════════════════════════════════════════════
-     UTILITIES
-  ══════════════════════════════════════════════════════ */
-  function setConnStatus(state) {
-    const dot = document.getElementById('conn-dot');
-    const lbl = document.getElementById('conn-label');
-    dot.className = 'dot' + (state !== 'connecting' ? ' ' + state : '');
-    lbl.textContent = { live:'Live', saving:'Saving…', error:'Error', connecting:'…' }[state] || '…';
-  }
-
-  let toastTimer = null;
-  function showToast(msg) {
-    const el = document.getElementById('toast');
-    el.textContent = msg; el.classList.add('show');
-    if (toastTimer) clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
-  }
-
-  /* ══════════════════════════════════════════════════════
-     CLEAR ALL DATA
-  ══════════════════════════════════════════════════════ */
-  function showClearModal() {
-    const btn = document.getElementById('confirm-clear-btn');
-    btn.disabled = false;
-    btn.textContent = 'Clear everything';
-    document.getElementById('clear-modal').style.display = 'flex';
-  }
-
-  function hideClearModal() {
-    document.getElementById('clear-modal').style.display = 'none';
-  }
-
-  function onModalOverlayClick(e) {
-    if (e.target === document.getElementById('clear-modal')) hideClearModal();
-  }
-
-  async function clearAllData() {
-    const btn = document.getElementById('confirm-clear-btn');
-    btn.disabled = true;
-    btn.textContent = 'Clearing…';
-
-    try {
-      /* Delete counts first — FK references materials */
-      const { error: e1 } = await db
-        .from(CNT_TABLE)
-        .delete()
-        .not('material_id', 'is', null);
-      if (e1) throw e1;
-
-      /* Delete materials */
-      const { error: e2 } = await db
-        .from(MAT_TABLE)
-        .delete()
-        .not('material_id', 'is', null);
-      if (e2) throw e2;
-
-      /* Reset local state */
-      counts     = {};
-      MATERIALS  = [];
-      parsedRows = null;
-
-      hideClearModal();
-      showToast('All data cleared — ready for a new count session');
-
-      /* Return to setup screen after a brief pause */
-      setTimeout(goBack, 1200);
-
-    } catch (err) {
-      console.error('Clear error:', err);
-      btn.disabled    = false;
-      btn.textContent = 'Clear everything';
-      showToast('Clear failed — check console');
-    }
-  }
-
-  /* ══════════════════════════════════════════════════════
-     BOOT
-  ══════════════════════════════════════════════════════ */
-  initSupabase();
-  checkExistingMaterials();
-
+  const fill  = { ready:'#1E7A3E', parsed:'#1456A8', error:'#B02828' }[type] || '#B02828';
+  const paths = {
+    ready:  'M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z',
+    parsed: 'M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v4a1 1 0 102 0V7zm-1 8a1 1 0 100-2 1 1 0 000 2z',
+    error:  'M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z'
+  };
+  const cur = el.querySelector('.mat-status-icon');
+  if (cur) cur.outerHTML = `<svg class="mat-status-icon" viewBox="0 0 20 20" fill="${fill}"><path fill-rule="evenodd" d="${paths[type]||paths.error}" clip-rule="evenodd"/></svg>`;
+}
+
+function evaluateStartBtn() {
+  startBtn.disabled = !(nameInput.value.trim() && (MATERIALS.length || parsedRows));
+}
+
+async function checkExistingMaterials() {
+  showMatStatus('loading', 'Checking for existing session…', '');
   try {
-    const saved = localStorage.getItem('cerritos_user');
-    if (saved) { nameInput.value = saved; }
-  } catch(e) {}
-</script>
-</body>
-</html>
+    const { data, error } = await db
+      .from(MAT_TABLE)
+      .select('material_id,description,sap_qty,uploaded_by,uploaded_at')
+      .order('material_id');
+    if (error) throw error;
+    if (data && data.length) {
+      MATERIALS = data;
+      const f = data[0];
+      const d = f.uploaded_at ? new Date(f.uploaded_at).toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' }) : '';
+      showMatStatus('ready', `${data.length} materials in session`, `${f.uploaded_by ? 'Uploaded by ' + f.uploaded_by + ' · ' : ''}${d} — drop a new file to replace.`);
+    } else {
+      document.getElementById('mat-status').style.display = 'none';
+    }
+  } catch (err) {
+    showMatStatus('error', 'Connection error', 'Check network or Supabase config.');
+  }
+  evaluateStartBtn();
+}
+
+async function startCounting() {
+  const name = nameInput.value.trim();
+  if (!name || (!MATERIALS.length && !parsedRows)) return;
+  currentUser = name;
+  try { localStorage.setItem('cerritos_user', name); } catch(e) {}
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  setConnStatus('connecting');
+  if (parsedRows) {
+    await uploadMaterials(parsedRows);
+    MATERIALS = parsedRows;
+    parsedRows = null;
+  }
+  await loadCounts();
+  renderAll();
+  subscribeRealtime();
+}
+
+async function uploadMaterials(rows) {
+  showToast(`Uploading ${rows.length} materials…`);
+  try {
+    await db.from(MAT_TABLE).delete().gt('material_id', 0);
+    const stamped = rows.map(r => ({ ...r, uploaded_by: currentUser, uploaded_at: new Date().toISOString() }));
+    for (let i = 0; i < stamped.length; i += 500) {
+      const { error } = await db.from(MAT_TABLE).insert(stamped.slice(i, i + 500));
+      if (error) throw error;
+    }
+    showToast(`${rows.length} materials uploaded`);
+  } catch (err) {
+    showToast('Upload failed — check console');
+  }
+}
+
+function goBack() {
+  document.getElementById('setup-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  nameInput.value = '';
+  startBtn.disabled = true;
+  MATERIALS = [];
+  counts    = {};
+  checkExistingMaterials();
+}
+
+/* ══════════════════════════════════════════════════════
+   MODE TOGGLE
+══════════════════════════════════════════════════════ */
+function setMode(mode) {
+  entryMode = mode;
+  document.getElementById('mode-add').classList.toggle('active', mode === 'add');
+  document.getElementById('mode-set').classList.toggle('active', mode === 'set');
+  document.getElementById('mode-hint-text').textContent =
+    mode === 'add' ? 'Adds to running total' : 'Replaces current count';
+
+  /* Update input styling in both views */
+  document.querySelectorAll('.qty-input-card, .t-qty').forEach(inp => {
+    inp.classList.toggle('mode-set', mode === 'set');
+  });
+  showToast(mode === 'add' ? '+ Add mode: values add to total' : '= Set mode: values replace total');
+}
+
+/* ══════════════════════════════════════════════════════
+   TAB SWITCHING
+══════════════════════════════════════════════════════ */
+function switchTab(name) {
+  activeTab = name;
+  document.getElementById('count-tab').style.display  = name === 'count'  ? 'block' : 'none';
+  document.getElementById('totals-tab').style.display = name === 'totals' ? 'block' : 'none';
+  document.getElementById('tab-count').classList.toggle('active',  name === 'count');
+  document.getElementById('tab-totals').classList.toggle('active', name === 'totals');
+  if (name === 'totals') renderTotals();
+}
+
+/* ══════════════════════════════════════════════════════
+   DATA
+══════════════════════════════════════════════════════ */
+async function loadCounts() {
+  try {
+    const { data, error } = await db.from(CNT_TABLE).select('*');
+    if (error) throw error;
+    counts = {};
+    (data || []).forEach(r => { counts[r.material_id] = r; });
+    setConnStatus('live');
+    updateLastSync();
+  } catch (err) {
+    setConnStatus('error');
+    showToast('Could not load counts');
+  }
+}
+
+function subscribeRealtime() {
+  db.channel('cerritos_live')
+    .on('postgres_changes', { event: '*', schema: 'public', table: CNT_TABLE }, payload => {
+      const id = (payload.new || payload.old || {}).material_id;
+      if (!id) return;
+      if (payload.eventType === 'DELETE') delete counts[id];
+      else counts[id] = payload.new;
+      updateRowDOM(id);
+      if (activeTab === 'totals') renderTotals();
+      updateLastSync();
+      updateFilterCounts();
+    })
+    .subscribe(s => {
+      if (s === 'SUBSCRIBED')    setConnStatus('live');
+      if (s === 'CHANNEL_ERROR') setConnStatus('error');
+    });
+}
+
+function scheduleSave(materialId, snapshot) {
+  if (saveTimers[materialId]) clearTimeout(saveTimers[materialId]);
+  saveTimers[materialId] = setTimeout(() => saveRow(materialId, snapshot), 600);
+}
+
+async function saveRow(materialId, snapshot) {
+  setConnStatus('saving');
+  try {
+    if (!snapshot) {
+      const { error } = await db.from(CNT_TABLE).delete().eq('material_id', materialId);
+      if (error) throw error;
+    } else {
+      const { error } = await db.from(CNT_TABLE).upsert({
+        material_id:  materialId,
+        physical_qty: snapshot.physical_qty,
+        counted_by:   snapshot.counted_by,
+        notes:        snapshot.notes || '',
+        updated_at:   new Date().toISOString()
+      }, { onConflict: 'material_id' });
+      if (error) throw error;
+    }
+    setConnStatus('live');
+  } catch (err) {
+    setConnStatus('error');
+    showToast('Save failed');
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   INPUT HANDLERS
+══════════════════════════════════════════════════════ */
+function onQtyKeydown(e, materialId, inputEl) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    inputEl.blur();
+  }
+  if (e.key === 'Escape') {
+    revertInput(materialId);
+    inputEl.blur();
+  }
+}
+
+function onQtyBlur(materialId, inputEl) {
+  if (!dirtyInputs.has(materialId)) return;
+  if (pendingEntry) return;
+  if (document.getElementById('confirm-modal').style.display !== 'none') return;
+
+  const val = inputEl.value.trim();
+  inputEl.style.borderColor = '';
+  if (val === '') { dirtyInputs.delete(materialId); return; }
+
+  const n = parseInt(val, 10);
+  if (isNaN(n)) { inputEl.style.borderColor = 'var(--bad)'; return; }
+
+  /* In SET mode, zero IS valid (counting zero items) */
+  if (entryMode === 'add' && n === 0) {
+    dirtyInputs.delete(materialId); inputEl.value = ''; return;
+  }
+
+  const prevQty = counts[materialId] != null ? counts[materialId].physical_qty : null;
+  pendingEntry  = { materialId, value: n, prevQty, mode: entryMode };
+  showConfirmModal(materialId, n, prevQty, entryMode);
+}
+
+function showConfirmModal(materialId, value, prevQty, mode) {
+  const mat = MATERIALS.find(m => m.material_id === materialId);
+  if (!mat) return;
+
+  const sap      = Number(mat.sap_qty);
+  const prev     = (prevQty !== null && prevQty !== undefined) ? prevQty : 0;
+  const newTotal = mode === 'set' ? value : prev + value;
+  const diff     = newTotal - sap;
+
+  document.getElementById('cm-mat-id').textContent   = materialId;
+  document.getElementById('cm-mat-desc').textContent = mat.description;
+  document.getElementById('cm-sap').textContent      = sap.toLocaleString();
+
+  /* Mode tag */
+  const modeTag = document.getElementById('cm-mode-tag');
+  if (mode === 'add') {
+    modeTag.textContent = '+ Add mode';
+    modeTag.className   = 'cm-mode-tag add-mode';
+  } else {
+    modeTag.textContent = '= Set mode';
+    modeTag.className   = 'cm-mode-tag';
+  }
+
+  /* Current total */
+  const prevEl = document.getElementById('cm-prev');
+  prevEl.textContent = (prevQty !== null && prevQty !== undefined) ? prevQty.toLocaleString() : 'None';
+
+  /* Entry label */
+  document.getElementById('cm-entry-label').textContent = mode === 'set' ? 'Set to' : 'This entry';
+
+  /* Entry value */
+  const countEl = document.getElementById('cm-count');
+  if (mode === 'set') {
+    countEl.textContent = value.toLocaleString();
+    countEl.className   = 'cm-val highlight';
+  } else {
+    countEl.textContent = (value > 0 ? '+' : '') + value.toLocaleString();
+    countEl.className   = 'cm-val highlight' + (value < 0 ? ' bad' : '');
+  }
+
+  /* New total */
+  const totalEl = document.getElementById('cm-total');
+  totalEl.textContent = newTotal.toLocaleString();
+  totalEl.className   = 'cm-val ' + (diff === 0 ? 'ok' : 'bad');
+
+  /* Variance */
+  const varEl = document.getElementById('cm-var');
+  varEl.textContent = (diff >= 0 ? '+' : '') + diff.toLocaleString();
+  varEl.className   = 'cm-val ' + (diff === 0 ? 'ok' : 'bad');
+
+  const btn = document.getElementById('confirm-entry-btn');
+  btn.disabled    = false;
+  btn.textContent = 'Confirm';
+
+  document.getElementById('confirm-modal').style.display = 'flex';
+}
+
+function confirmEntry() {
+  if (!pendingEntry) return;
+  const { materialId, value, prevQty, mode } = pendingEntry;
+  const btn = document.getElementById('confirm-entry-btn');
+  btn.disabled = true;
+
+  const prev     = (prevQty !== null && prevQty !== undefined) ? prevQty : 0;
+  const newTotal = mode === 'set' ? value : prev + value;
+
+  counts[materialId] = {
+    material_id:  materialId,
+    physical_qty: newTotal,
+    counted_by:   currentUser,
+    notes:        (counts[materialId] || {}).notes || '',
+    updated_at:   new Date().toISOString()
+  };
+
+  const snapshot = { ...counts[materialId] };
+  dirtyInputs.delete(materialId);
+
+  /* Clear inputs */
+  const cardInp  = document.querySelector(`#card-${materialId} .qty-input-card`);
+  const tableInp = document.getElementById('tqty-' + materialId);
+  if (cardInp)  { cardInp.value = ''; cardInp.style.borderColor = ''; }
+  if (tableInp) { tableInp.value = ''; tableInp.style.borderColor = ''; }
+
+  updateRowDOM(materialId);
+  if (activeTab === 'totals') renderTotals();
+  updateFilterCounts();
+  scheduleSave(materialId, snapshot);
+
+  pendingEntry = null;
+  document.getElementById('confirm-modal').style.display = 'none';
+
+  showToast(`${materialId} → ${newTotal.toLocaleString()} saved`);
+}
+
+function cancelEntry() {
+  if (pendingEntry) {
+    dirtyInputs.delete(pendingEntry.materialId);
+    revertInput(pendingEntry.materialId);
+    pendingEntry = null;
+  }
+  document.getElementById('confirm-modal').style.display = 'none';
+}
+
+function revertInput(materialId) {
+  dirtyInputs.delete(materialId);
+  const cardInp  = document.querySelector(`#card-${materialId} .qty-input-card`);
+  const tableInp = document.getElementById('tqty-' + materialId);
+  if (cardInp)  { cardInp.value  = ''; cardInp.style.borderColor  = ''; }
+  if (tableInp) { tableInp.value = ''; tabl
