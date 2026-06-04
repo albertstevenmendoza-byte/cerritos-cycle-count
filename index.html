@@ -879,14 +879,10 @@ function subscribeRealtime() {
     });
 }
 
-function scheduleSave(materialId, snapshot) {
-  if (saveTimers[materialId]) clearTimeout(saveTimers[materialId]);
-  saveTimers[materialId]=setTimeout(()=>saveRow(materialId,snapshot),600);
-}
-
-async function saveRow(materialId, snapshot) {
+/* saveNow — fires immediately, retries once after 2s on failure */
+async function saveNow(materialId, snapshot) {
   setConnStatus('saving');
-  try {
+  const attempt = async () => {
     if (!snapshot) {
       const {error}=await db.from(CNT_TABLE).delete().eq('material_id',materialId);
       if (error) throw error;
@@ -894,12 +890,26 @@ async function saveRow(materialId, snapshot) {
       const {error}=await db.from(CNT_TABLE).upsert({
         material_id:materialId, physical_qty:snapshot.physical_qty,
         counted_by:snapshot.counted_by, notes:snapshot.notes||'',
-        updated_at:new Date().toISOString()
+        updated_at:snapshot.updated_at
       },{onConflict:'material_id'});
       if (error) throw error;
     }
+  };
+  try {
+    await attempt();
     setConnStatus('live');
-  } catch(err) { setConnStatus('error'); showToast('Save failed'); }
+  } catch(err) {
+    setTimeout(async () => {
+      try { await attempt(); setConnStatus('live'); }
+      catch(err2) { setConnStatus('error'); showToast('Save failed — check connection'); }
+    }, 2000);
+  }
+}
+
+/* scheduleSave — debounced, used only for notes */
+function scheduleSave(materialId, snapshot) {
+  if (saveTimers[materialId]) clearTimeout(saveTimers[materialId]);
+  saveTimers[materialId]=setTimeout(()=>saveNow(materialId,snapshot), 600);
 }
 
 /* ── Input handlers ──────────────────────────────── */
@@ -965,7 +975,7 @@ function confirmEntry() {
   if (tableInp) { tableInp.value=''; tableInp.style.borderColor=''; }
   updateRowDOM(materialId);
   if (activeTab==='totals') renderTotals();
-  updateFilterCounts(); scheduleSave(materialId,snapshot);
+  updateFilterCounts(); saveNow(materialId,snapshot);
   pendingEntry=null;
   document.getElementById('confirm-modal').style.display='none';
   showToast(`${materialId} \u2192 ${newTotal.toLocaleString()} saved`);
