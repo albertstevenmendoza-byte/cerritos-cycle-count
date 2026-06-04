@@ -840,14 +840,17 @@ async function startCounting() {
 async function uploadMaterials(rows) {
   showToast(`Uploading ${rows.length} materials\u2026`);
   try {
+    /* Delete counts first (FK), then materials */
+    await db.from(CNT_TABLE).delete().not('material_id','is',null);
     await db.from(MAT_TABLE).delete().gt('material_id',0);
     const stamped=rows.map(r=>({...r,uploaded_by:currentUser,uploaded_at:new Date().toISOString()}));
     for (let i=0;i<stamped.length;i+=500) {
-      const {error}=await db.from(MAT_TABLE).insert(stamped.slice(i,i+500));
+      /* upsert handles any rows that survived the async delete */
+      const {error}=await db.from(MAT_TABLE).upsert(stamped.slice(i,i+500),{onConflict:'material_id'});
       if (error) throw error;
     }
     showToast(`${rows.length} materials uploaded`);
-  } catch(err) { showToast('Upload failed \u2014 check console'); }
+  } catch(err) { console.error('Upload error:',err); showToast('Upload failed \u2014 check console'); }
 }
 
 function goBack() {
