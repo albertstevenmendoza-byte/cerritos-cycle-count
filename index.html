@@ -187,6 +187,22 @@ input::placeholder{color:var(--ink-3)}
   transition:all .15s;white-space:nowrap;-webkit-tap-highlight-color:transparent}
 .mode-opt.active{background:var(--surface);color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.12)}
 .mode-hint{font-size:11px;color:var(--ink-3);margin-left:auto}
+.sub-toggle{display:flex;align-items:center;gap:7px;margin-left:auto;
+  background:var(--surface-2);border:1.5px solid var(--line-med);
+  border-radius:99px;padding:4px 10px 4px 6px;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;transition:all .15s;touch-action:manipulation}
+.sub-toggle:active{transform:scale(.97)}
+.sub-toggle.active{background:var(--bad-bg);border-color:var(--bad-line)}
+.sub-toggle-track{width:28px;height:16px;border-radius:8px;background:var(--line-heavy);
+  flex-shrink:0;position:relative;transition:background .2s}
+.sub-toggle.active .sub-toggle-track{background:var(--bad)}
+.sub-toggle-thumb{width:12px;height:12px;border-radius:50%;background:#fff;
+  position:absolute;top:2px;left:2px;transition:transform .2s;
+  box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.sub-toggle.active .sub-toggle-thumb{transform:translateX(12px)}
+.sub-toggle-label{font-size:12px;font-weight:600;color:var(--ink-3);
+  font-family:var(--sans);white-space:nowrap;transition:color .15s}
+.sub-toggle.active .sub-toggle-label{color:var(--bad)}
 
 /* ── Groups (mobile) ──────────────────────────────── */
 .groups-container{padding:.75rem;display:flex;flex-direction:column;gap:.5rem}
@@ -548,7 +564,10 @@ input::placeholder{color:var(--ink-3)}
         <button class="mode-opt active" id="mode-add">+ Add</button>
         <button class="mode-opt" id="mode-set">= Set</button>
       </div>
-      <span class="mode-hint" id="mode-hint-text">Adds to total &middot; use negative to subtract</span>
+      <button class="sub-toggle" id="sub-toggle" onclick="toggleSubtract()">
+        <div class="sub-toggle-track"><div class="sub-toggle-thumb"></div></div>
+        <span class="sub-toggle-label">Subtract</span>
+      </button>
     </div>
     <div class="groups-container" id="groups-container"></div>
     <div class="desktop-table-wrap">
@@ -650,7 +669,7 @@ const CNT_TABLE = 'cerritos_counts';
 
 /* ── State ───────────────────────────────────────── */
 let db, MATERIALS=[], counts={}, parsedRows=null, currentUser='';
-let activeFilter='all', entryMode='add', saveTimers={}, dirtyInputs=new Set();
+let activeFilter='all', entryMode='add', subtractMode=false, saveTimers={}, dirtyInputs=new Set();
 let activeTab='count', pendingEntry=null, groupExpanded={};
 
 const GROUP_ORDER = ['Cups','Lids','Labels','Cases','Seals','Sleeves','Tubs','Oils','Other'];
@@ -842,14 +861,27 @@ function goBack() {
 }
 
 /* ── Mode toggle ─────────────────────────────────── */
+function toggleSubtract() {
+  subtractMode = !subtractMode;
+  const btn = document.getElementById('sub-toggle');
+  if (btn) btn.classList.toggle('active', subtractMode);
+}
+
 function setMode(mode) {
   entryMode=mode;
   document.getElementById('mode-add').classList.toggle('active',mode==='add');
   document.getElementById('mode-set').classList.toggle('active',mode==='set');
   document.getElementById('mode-hint-text').textContent=mode==='add'?'Adds to total \u00b7 use negative to subtract':'Replaces current count';
   document.querySelectorAll('.qty-input-card,.t-qty').forEach(inp=>inp.classList.toggle('mode-set',mode==='set'));
-  /* Sign buttons only make sense in Add mode */
+  /* Sign buttons and subtract toggle only make sense in Add mode */
   document.querySelectorAll('.sign-btn').forEach(btn=>btn.style.display=mode==='set'?'none':'');
+  const subTgl = document.getElementById('sub-toggle');
+  if (subTgl) subTgl.style.display = mode==='set' ? 'none' : '';
+  /* Reset subtract mode when switching to Set */
+  if (mode==='set' && subtractMode) {
+    subtractMode = false;
+    if (subTgl) subTgl.classList.remove('active');
+  }
   showToast(mode==='add'?'+ Add mode: values add to total':'= Set mode: values replace total');
 }
 
@@ -942,8 +974,10 @@ function onQtyBlur(materialId, inputEl) {
   if (isNaN(n)) { inputEl.style.borderColor='var(--bad)'; return; }
   if (entryMode==='add'&&n===0) { dirtyInputs.delete(materialId); inputEl.value=''; return; }
   const prevQty=counts[materialId]!=null?counts[materialId].physical_qty:null;
-  pendingEntry={materialId,value:n,prevQty,mode:entryMode};
-  showConfirmModal(materialId,n,prevQty,entryMode);
+  /* Apply subtract toggle — negate n if active (and n is positive) */
+  const finalN = (subtractMode && n > 0) ? -n : n;
+  pendingEntry={materialId,value:finalN,prevQty,mode:entryMode};
+  showConfirmModal(materialId,finalN,prevQty,entryMode);
 }
 
 function showConfirmModal(materialId, value, prevQty, mode) {
@@ -1176,14 +1210,11 @@ function renderGroups() {
     <div id="chip-${id}">${buildChip(phys,sap)}</div>
   </div>
   <div class="row-right">
-    <div class="qty-row">
-      <button class="sign-btn" id="sign-${id}" onclick="toggleSign(${id})" tabindex="-1" style="${entryMode==='set'?'display:none':''}">−</button>
-      <input class="row-qty qty-input-card${mc}" type="text" inputmode="decimal"
-             placeholder="${entryMode==='set'?'= qty':'qty'}" value=""
-             oninput="dirtyInputs.add(${id});syncSign(${id},this)"
-             onkeydown="onQtyKeydown(event,${id},this)"
-             onblur="onQtyBlur(${id},this)" />
-    </div>
+    <input class="row-qty qty-input-card${mc}" type="text" inputmode="decimal"
+           placeholder="${entryMode==='set'?'= qty':'qty'}" value=""
+           oninput="dirtyInputs.add(${id})"
+           onkeydown="onQtyKeydown(event,${id},this)"
+           onblur="onQtyBlur(${id},this)" />
     <span class="row-var ${cls}" id="rv-${id}">${text}</span>
   </div>
 </div>
