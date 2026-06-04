@@ -1216,11 +1216,30 @@ function savePhotoStore() {
 function renderThumbs(id) {
   var photos = photoStore[id];
   if (!photos || !photos.length) return '';
-  return photos.map(function(src, i) {
-    return '<span class="rm-photo"><img src="'+src+'" onclick="viewPhoto(event,''+src+'')" alt="photo" title="Tap to view"/>'
-         + '<span onclick="removePhoto('+id+','+i+',event)" style="position:absolute;top:-5px;right:-5px;width:16px;height:16px;background:var(--bad);color:#fff;border-radius:50%;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1;z-index:1">&times;</span>'
-         + '</span>';
-  }).join('');
+  var html = [];
+  photos.forEach(function(src, i) {
+    var wrap  = document.createElement("span");
+    wrap.className = "rm-photo";
+    wrap.style.position = "relative";
+    wrap.style.display  = "inline-block";
+    var img = document.createElement("img");
+    img.src   = src;
+    img.alt   = "photo";
+    img.title = "Tap to view";
+    img.style.cssText = "width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--line-med);cursor:pointer;display:block";
+    img.addEventListener("click", function(e) { viewPhoto(e, src); });
+    var rm = document.createElement("span");
+    rm.textContent = "\u00d7";
+    rm.style.cssText = "position:absolute;top:-5px;right:-5px;width:16px;height:16px;background:var(--bad);color:#fff;border-radius:50%;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1;z-index:1;text-align:center";
+    rm.addEventListener("click", function(e) { removePhoto(id, i, e); });
+    wrap.appendChild(img);
+    wrap.appendChild(rm);
+    /* Serialize to HTML string so it can be set via innerHTML */
+    var tmp = document.createElement("div");
+    tmp.appendChild(wrap);
+    html.push(tmp.innerHTML);
+  });
+  return html.join('');
 }
 
 function openPhotoPicker(id) {
@@ -1267,8 +1286,9 @@ function removePhoto(id, idx, e) {
   if(pb) pb.classList.toggle('has-photo',!!(photoStore[id]&&photoStore[id].length));
 }
 
-function viewPhoto(e, src) {
+function viewPhoto(e, elOrSrc) {
   e.stopPropagation();
+  var src = typeof elOrSrc === 'string' ? elOrSrc : elOrSrc.src;
   document.getElementById('photo-modal-img').src=src;
   document.getElementById('photo-modal').style.display='flex';
 }
