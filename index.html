@@ -239,6 +239,15 @@ input::placeholder{color:var(--ink-3)}
 .row-total-chip.chip-ok{background:var(--ok-bg);color:var(--ok);border-color:var(--ok-line)}
 .row-total-chip.chip-bad{background:var(--bad-bg);color:var(--bad);border-color:var(--bad-line)}
 .row-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0}
+.qty-row{display:flex;align-items:center;gap:5px}
+.sign-btn{width:32px;height:38px;background:var(--surface-2);border:1.5px solid var(--line-med);
+  border-radius:var(--r);font-size:18px;font-weight:700;color:var(--ink-2);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  flex-shrink:0;-webkit-tap-highlight-color:transparent;
+  transition:background .12s,color .12s,border-color .12s;
+  font-family:var(--mono);line-height:1;user-select:none}
+.sign-btn:active{background:var(--bad-bg);border-color:var(--bad-line);color:var(--bad)}
+.sign-btn.is-neg{background:var(--bad-bg);border-color:var(--bad-line);color:var(--bad)}
 .row-qty{width:88px;height:38px;padding:0 10px;text-align:right;
   font-family:var(--mono);font-size:15px;font-weight:600;
   background:var(--surface-2);border:1.5px solid var(--line-med);border-radius:var(--r);
@@ -839,6 +848,8 @@ function setMode(mode) {
   document.getElementById('mode-set').classList.toggle('active',mode==='set');
   document.getElementById('mode-hint-text').textContent=mode==='add'?'Adds to total \u00b7 use negative to subtract':'Replaces current count';
   document.querySelectorAll('.qty-input-card,.t-qty').forEach(inp=>inp.classList.toggle('mode-set',mode==='set'));
+  /* Sign buttons only make sense in Add mode */
+  document.querySelectorAll('.sign-btn').forEach(btn=>btn.style.display=mode==='set'?'none':'');
   showToast(mode==='add'?'+ Add mode: values add to total':'= Set mode: values replace total');
 }
 
@@ -973,6 +984,8 @@ function confirmEntry() {
   const tableInp=document.getElementById('tqty-'+materialId);
   if (cardInp)  { cardInp.value='';  cardInp.style.borderColor=''; }
   if (tableInp) { tableInp.value=''; tableInp.style.borderColor=''; }
+  const signBtn = document.getElementById('sign-' + materialId);
+  if (signBtn) signBtn.classList.remove('is-neg');
   updateRowDOM(materialId);
   if (activeTab==='totals') renderTotals();
   updateFilterCounts(); saveNow(materialId,snapshot);
@@ -992,6 +1005,32 @@ function revertInput(materialId) {
   const ti=document.getElementById('tqty-'+materialId);
   if (ci) { ci.value=''; ci.style.borderColor=''; }
   if (ti) { ti.value=''; ti.style.borderColor=''; }
+  const sb=document.getElementById('sign-'+materialId);
+  if (sb) sb.classList.remove('is-neg');
+}
+
+/* Toggle sign button: flips the input between positive and negative */
+function toggleSign(materialId) {
+  const inp = document.querySelector(`#card-${materialId} .qty-input-card`);
+  const btn = document.getElementById('sign-' + materialId);
+  if (!inp) return;
+  const raw = inp.value.trim();
+  if (raw === '' || raw === '-') {
+    /* Nothing typed yet — just arm the negative state visually */
+    inp.value = raw === '-' ? '' : '-';
+  } else {
+    const n = parseFloat(raw);
+    if (!isNaN(n)) inp.value = n > 0 ? String(-n) : String(Math.abs(n));
+  }
+  if (btn) btn.classList.toggle('is-neg', inp.value.startsWith('-'));
+  dirtyInputs.add(materialId);
+  inp.focus();
+}
+
+/* Keep sign button state in sync as user types */
+function syncSign(materialId, inputEl) {
+  const btn = document.getElementById('sign-' + materialId);
+  if (btn) btn.classList.toggle('is-neg', inputEl.value.startsWith('-'));
 }
 
 function onNotesChange(materialId, inputEl) {
@@ -1127,11 +1166,14 @@ function renderGroups() {
     <div id="chip-${id}">${buildChip(phys,sap)}</div>
   </div>
   <div class="row-right">
-    <input class="row-qty qty-input-card${mc}" type="text" inputmode="decimal"
-           placeholder="${entryMode==='set'?'= qty':'±  qty'}" value=""
-           oninput="dirtyInputs.add(${id})"
-           onkeydown="onQtyKeydown(event,${id},this)"
-           onblur="onQtyBlur(${id},this)" />
+    <div class="qty-row">
+      <button class="sign-btn" id="sign-${id}" onclick="toggleSign(${id})" tabindex="-1" style="${entryMode==='set'?'display:none':''}">−</button>
+      <input class="row-qty qty-input-card${mc}" type="text" inputmode="decimal"
+             placeholder="${entryMode==='set'?'= qty':'qty'}" value=""
+             oninput="dirtyInputs.add(${id});syncSign(${id},this)"
+             onkeydown="onQtyKeydown(event,${id},this)"
+             onblur="onQtyBlur(${id},this)" />
+    </div>
     <span class="row-var ${cls}" id="rv-${id}">${text}</span>
   </div>
 </div>
