@@ -892,16 +892,11 @@ function setMode(mode) {
   entryMode=mode;
   document.getElementById('mode-add').classList.toggle('active',mode==='add');
   document.getElementById('mode-set').classList.toggle('active',mode==='set');
-  document.getElementById('mode-hint-text').textContent=mode==='add'?'Adds to total \u00b7 use negative to subtract':'Replaces current count';
   document.querySelectorAll('.qty-input-card,.t-qty').forEach(inp=>inp.classList.toggle('mode-set',mode==='set'));
-  /* Sign buttons and subtract toggle only make sense in Add mode */
-  document.querySelectorAll('.sign-btn').forEach(btn=>btn.style.display=mode==='set'?'none':'');
   const subTgl = document.getElementById('sub-toggle');
-  if (subTgl) subTgl.style.display = mode==='set' ? 'none' : '';
-  /* Reset subtract mode when switching to Set */
-  if (mode==='set' && subtractMode) {
-    subtractMode = false;
-    if (subTgl) subTgl.classList.remove('active');
+  if (subTgl) {
+    subTgl.style.display = mode==='set' ? 'none' : '';
+    if (mode==='set' && subtractMode) { subtractMode=false; subTgl.classList.remove('active'); }
   }
   showToast(mode==='add'?'+ Add mode: values add to total':'= Set mode: values replace total');
 }
