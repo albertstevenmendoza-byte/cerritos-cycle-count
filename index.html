@@ -781,7 +781,7 @@ function handleFile(file) {
       if (missing.length) { showMatStatus('error','Missing columns',missing.join(', ')); return; }
       const parsed=[];
       for (let i=hIdx+1; i<rows.length; i++) {
-        const r=rows[i], id=parseInt(r[matIdx],10), desc=String(r[descIdx]||'').trim(), qty=parseFloat(r[qtyIdx])||0;
+        const r=rows[i], id=parseInt(String(r[matIdx]||'').trim(),10), desc=String(r[descIdx]||'').trim(), qty=parseFloat(String(r[qtyIdx]||'0').replace(/[^0-9.-]/g,''))||0;
         if (!id||!desc) continue;
         parsed.push({material_id:id, description:desc, sap_qty:qty});
       }
@@ -849,7 +849,19 @@ async function startCounting() {
   document.getElementById('setup-screen').style.display='none';
   document.getElementById('app').style.display='block';
   setConnStatus('connecting');
-  if (parsedRows) { await uploadMaterials(parsedRows); MATERIALS=parsedRows; parsedRows=null; }
+  if (parsedRows) {
+    await uploadMaterials(parsedRows);
+    /* Re-query after upload to confirm rows persisted */
+    const {data:verify, error:vErr} = await db.from(MAT_TABLE).select('material_id', {count:'exact'});
+    console.log('Post-upload verify:', {rows: verify?.length, error: vErr});
+    if (!vErr && verify?.length) {
+      MATERIALS = parsedRows;
+    } else {
+      showToast('Upload may have failed — check console');
+      console.error('Upload verify failed:', vErr);
+    }
+    parsedRows = null;
+  }
   await loadCounts();
   renderAll();
   subscribeRealtime();
@@ -867,6 +879,7 @@ async function uploadMaterials(rows) {
       const {error}=await db.from(MAT_TABLE).upsert(stamped.slice(i,i+500),{onConflict:'material_id'});
       if (error) throw error;
     }
+    console.log(`Upload complete: ${rows.length} rows written to ${MAT_TABLE}`);
     showToast(`${rows.length} materials uploaded`);
   } catch(err) { console.error('Upload error:',err); showToast('Upload failed: ' + (err?.message||err)); }
 }
