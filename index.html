@@ -915,7 +915,7 @@ function switchTab(name) {
 }
 
 /* ── Data ────────────────────────────────────────── */
-async async function loadCounts() {
+async function loadCounts() {
   try {
     const {data,error}=await db.from(CNT_TABLE).select('*');
     if (error) throw error;
