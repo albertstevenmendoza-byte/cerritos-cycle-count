@@ -104,6 +104,12 @@ input::placeholder{color:var(--ink-3)}
 .btn-primary:hover:not(:disabled){background:var(--gold-dk)}
 .btn-primary:active:not(:disabled){transform:scale(.99)}
 .btn-primary:disabled{background:var(--surface-2);color:var(--ink-3);cursor:not-allowed}
+.btn-secondary{width:100%;height:40px;background:none;color:var(--ink-2);
+  border:1px solid var(--line-med);border-radius:var(--r);
+  font-size:14px;font-weight:600;cursor:pointer;margin-top:.65rem;
+  font-family:var(--sans);transition:background .15s;
+  -webkit-tap-highlight-color:transparent;display:none}
+.btn-secondary:hover{background:var(--surface-2)}
 
 /* ── App shell ────────────────────────────────────── */
 #app{display:none}
@@ -477,6 +483,7 @@ input::placeholder{color:var(--ink-3)}
       </div>
     </div>
     <button class="btn-primary" id="start-btn" disabled>Start Counting &rarr;</button>
+    <button class="btn-secondary" id="mat-refresh-btn" >↻ Refresh session data</button>
   </div>
 </div>
 
@@ -688,6 +695,13 @@ document.addEventListener('DOMContentLoaded', () => {
   nameInput.addEventListener('input', evaluateStartBtn);
   nameInput.addEventListener('keydown', e => { if (e.key==='Enter' && !startBtn.disabled) startCounting(); });
   startBtn.addEventListener('click', startCounting);
+  document.getElementById('mat-refresh-btn').addEventListener('click', checkExistingMaterials);
+
+  /* Re-check Supabase whenever the name field is focused so teammates
+     always pick up a freshly uploaded material list without reloading */
+  nameInput.addEventListener('focus', () => {
+    if (!MATERIALS.length) checkExistingMaterials();
+  });
 
   fileInput.addEventListener('change', e => { const f=e.target.files[0]; if(f) handleFile(f); });
   dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('dragover'); });
@@ -813,8 +827,10 @@ async function checkExistingMaterials() {
       MATERIALS=data;
       const f=data[0], d=f.uploaded_at?new Date(f.uploaded_at).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'';
       showMatStatus('ready',`${data.length} materials in session`,`${f.uploaded_by?'Uploaded by '+f.uploaded_by+' \u00b7 ':''}${d} \u2014 drop a new file to replace.`);
+      document.getElementById('mat-refresh-btn').style.display='none';
     } else {
-      document.getElementById('mat-status').style.display='none';
+      showMatStatus('error','No materials found','Ask the count lead to upload the SAP file, then tap below to refresh.');
+      document.getElementById('mat-refresh-btn').style.display='block';
     }
   } catch(err) {
     showMatStatus('error','Connection error','Check network or Supabase config.');
