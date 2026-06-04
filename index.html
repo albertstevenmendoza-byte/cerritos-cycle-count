@@ -1112,7 +1112,7 @@ function applyFilters() {
     var show=pass?'':'none';
     var card=document.getElementById('card-'+m.material_id);    if(card) card.style.display=show;
     var row=document.getElementById('row-'+m.material_id);      if(row)  row.style.display=show;
-    var nd=document.getElementById('nd-'+m.material_id);        if(nd&&phys!=null) nd.style.display=show;
+    var nd=document.getElementById('nd-'+m.material_id);        if(nd) nd.style.display=show;
     if(pass){ visible++; gv[getGroup(m.description)]++; }
   });
   GROUP_ORDER.forEach(function(name){ var g=document.getElementById('grp-'+name); if(g) g.style.display=gv[name]>0?'':'none'; });
