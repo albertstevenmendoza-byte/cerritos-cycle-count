@@ -613,6 +613,7 @@ let currentUser = '', activeFilter = 'all', entryMode = 'add';
 let subtractMode = false, activeTab = 'count';
 let pendingEntry = null, dirtyInputs = new Set();
 let saveTimers = {}, groupExpanded = {};
+var photoStore = (function(){ try { var s=localStorage.getItem('cerritos_photos'); return s?JSON.parse(s):{}; } catch(e){return {};} })();
 
 const GROUP_ORDER = ['Cups','Lids','Labels','Cases','Seals','Sleeves','Tubs','Oils','Other'];
 const GROUP_ICONS = {Cups:'🥤',Lids:'🔵',Labels:'🏷️',Cases:'📦',Seals:'🔒',Sleeves:'🫧',Tubs:'🪣',Oils:'🫗',Other:'📋'};
